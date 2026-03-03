@@ -132,7 +132,7 @@ def apply_json_patch(
 
     # 7. Render markdown representation
     try:
-        render(str(doc_path))
+        render(str(doc_path), external_models_path=external_models_path)
     except Exception as e:
         # Rendering failure doesn't fail the patch operation
         # JSON was updated successfully, but warn the user
