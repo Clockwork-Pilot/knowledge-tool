@@ -1,0 +1,279 @@
+# Knowledge Tools
+
+## Table of Contents
+
+- [API](#api)
+  - [Scripts](#scripts)
+    - [apply_json_patch.py](#apply_json_patchpy)
+      - [Using Stdin for Complex Patches](#using-stdin-for-complex-patches)
+  - [Functions](#functions)
+    - [apply_json_patch()](#apply_json_patch)
+      - [Rendering Behavior](#rendering-behavior)
+    - [Pluggable Models](#pluggable-models)
+      - [Overview](#overview)
+      - [Usage](#usage)
+      - [Creating Custom Models](#creating-custom-models)
+    - [Opts Configuration](#opts-configuration)
+      - [render_priority Field](#render_priority-field)
+- [File Modification Workflow](#file-modification-workflow)
+- [Architecture](#architecture)
+  - [Json Patch](#json-patch)
+  - [Document Rendering](#document-rendering)
+  - [Workflow](#workflow)
+  - [File Protection Purpose](#file-protection-purpose)
+- [Testing](#testing)
+
+Knowledge Base API documentation with apply_json_patch operations, error handling, and file protection
+
+**Version:** 2.0.0
+
+**Backend:** knowledge_base_system
+
+## API
+Public interfaces for knowledge tools: command-line scripts and Python functions
+
+### Scripts
+Command-line script interfaces
+
+#### apply_json_patch.py
+Apply JSON Patch operations to knowledge documents from command line with automatic markdown rendering. Supports both command-line arguments and stdin input to avoid shell escaping issues. Works with built-in models and pluggable custom models.
+
+**Example Code:** python tools/apply_json_patch.py doc.json '[{"op": "replace", "path": "/label", "value": "New Label"}]'
+
+**Expected Output:** ✓ Patched doc.json
+
+**With Pluggable Models:** python tools/apply_json_patch.py --models-path ./custom_models doc.json '[{"op": "replace", "path": "/type", "value": "CustomType"}]'
+
+##### Using Stdin for Complex Patches
+For complex JSON patches with many nested quotes, pass the patch via stdin to avoid shell escaping issues.
+
+**Why:** Shell escaping can be error-prone with deeply nested JSON. Use stdin for reliability.
+
+**Simple Example:** python tools/apply_json_patch.py doc.json '[{"op": "replace", "path": "/label", "value": "new"}]'
+
+**Complex Example:** cat patch.json | python tools/apply_json_patch.py --stdin knowledge_tool.json
+
+**Create With Stdin:** cat patch.json | python tools/apply_json_patch.py --stdin --create doc.json
+
+### Functions
+Python function interfaces for programmatic use
+
+#### apply_json_patch()
+Apply JSON Patch to document file with validation and automatic markdown rendering.
+
+```
+apply_json_patch(document_path: str, json_patch: Optional[str] = None, create: bool = False, external_models_path: Optional[str] = None) -> Optional[ApplyPatchErrorResponse]
+```
+
+**Parameters:**
+  - document_path (str): Path to Doc JSON file
+  - json_patch (Optional[str]): RFC 6902 JSON Patch operations as JSON string. If None, only re-renders without patching (default: None)
+  - create (bool): If True, create document with patch as initial state (default: False)
+  - external_models_path (Optional[str]): Path to folder with pluggable model definitions (default: None)
+
+**Returns:** None on success, ApplyPatchErrorResponse object on error with detailed context
+
+**Exceptions:**
+  - JsonPatchException - Invalid patch format
+  - ValidationError - Schema violation
+  - FileNotFoundError - Document not found
+  - IOError - File access issues
+
+**Behavior:** All exceptions caught and returned as ApplyPatchErrorResponse with helpful hints
+
+**Safety:** Atomic operations, in-memory validation before write, file protection workflow, read-only file management
+
+**Rendering:** Every successful patch automatically generates markdown: document.json → document.md with identical file protection
+
+##### Rendering Behavior
+When apply_json_patch succeeds, it always attempts to regenerate the markdown file.
+
+**When Renders:**
+  - After successful patch application and write
+  - When called with no patch (re-render only mode)
+  - In both --stdin and command-line argument modes
+
+**What Happens:**
+  1. JSON is validated against Pydantic schema
+  2. File is written with atomic operations
+  3. Markdown (.md file) is automatically generated from the JSON
+  4. Both files are set to read-only for protection
+
+**Rendering Failures:**
+  - If rendering fails, operation still succeeds (JSON is safe)
+  - User is warned via stderr: ⚠️ Warning: Failed to render markdown: ...
+  - JSON and markdown may be out of sync
+  - Patch command will exit with code 0 (success)
+
+**Important:** Always check stderr for warnings about rendering failures
+
+#### Pluggable Models
+Extend apply_json_patch with custom model types by loading external model definitions from a folder.
+
+##### Overview
+Pluggable models allow you to define custom document types beyond the built-in Doc model. External models are loaded dynamically and work seamlessly with apply_json_patch validation and rendering.
+
+**Key Points:**
+  - Load custom model classes from external Python files
+  - All internal models (Doc, Task, etc.) continue to work normally
+  - External and internal models coexist in the same registry
+  - Custom models inherit from RenderableModel and implement render()
+  - Validation works the same way as built-in models
+
+**Internal Models:**
+  - Doc - Default document model with hierarchical children
+  - Task - Optional task tracking model (if available)
+  - Iteration - Optional iteration model (if available)
+
+##### Usage
+How to use pluggable models with apply_json_patch.
+
+**Command Line:** python tools/apply_json_patch.py --models-path ./custom_models doc.json '[{"op": "replace", "path": "/type", "value": "CustomType"}]'
+
+**Python Function:** apply_json_patch(document_path, json_patch, external_models_path='./custom_models')
+
+**Folder Structure:** custom_models/
+  my_model.py      # Contains class MyModel(RenderableModel)
+  other_model.py   # Contains class OtherModel(RenderableModel)
+
+##### Creating Custom Models
+How to create a pluggable model.
+
+**Requirements:**
+  - Inherit from RenderableModel
+  - Define type as Literal["ModelType"]
+  - Implement render() method returning markdown string
+  - Optionally implement tips() method
+  - Use Pydantic Field for schema validation
+
+**Example Code:** from typing import Literal
+from pydantic import Field
+from models import RenderableModel
+
+class MyModel(RenderableModel):
+    type: Literal["MyModel"] = "MyModel"
+    id: str = Field(..., description="Unique ID")
+    title: str = Field(..., description="Title")
+    
+    def render(self) -> str:
+        return f"# {self.title}"
+    
+    def tips(self) -> list:
+        return ["Custom model loaded successfully"]
+
+#### Opts Configuration
+Non-displayable rendering options for document nodes
+
+##### render_priority Field
+When true, renders node before siblings with render_priority=false
+
+**Type:** bool
+
+## File Modification Workflow
+How to properly modify knowledge documents using the tool.
+
+**Important:** ALWAYS use apply_json_patch to modify documents. Never edit JSON files directly.
+
+**Workflow:**
+  1. Prepare JSON Patch operations (RFC 6902 format)
+  2. Call apply_json_patch with document path and patch
+  3. Tool automatically: removes read-only → writes atomically → restores read-only → renders markdown
+
+**Why Important:**
+  - Ensures data consistency and validation through Pydantic schema
+  - Automatically regenerates markdown documentation
+  - Maintains file protection (read-only flags)
+  - Provides error handling and helpful hints
+  - Atomic writes prevent partial/corrupted states
+
+**Wrong Way:** ❌ Directly editing knowledge_tool.json with a text editor or file tools
+
+**Right Way:** ✓ python tools/apply_json_patch.py knowledge_tool.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
+
+## Architecture
+API-first design with JSON Patch operations
+
+### Json Patch
+RFC 6902 JSON Patch standard for describing modifications to JSON documents.
+
+**File:** tools/apply_json_patch.py
+
+**Standard:** RFC 6902
+
+**Operations:**
+- add - Insert or replace value
+- remove - Delete value at path
+- replace - Replace value at path
+- move - Move value from one path to another
+- copy - Copy value from one path to another
+- test - Assert value equals expected before applying
+
+```
+[{"op": "replace", "path": "/label", "value": "new_label"}, {"op": "add", "path": "/children/new_id", "value": {...}}]
+```
+
+**Operation Structure:**
+  - Required Fields: ['op', 'path']
+  - Optional Fields: ['value', 'from']
+  - Op: Operation type (add, remove, replace, move, copy, test)
+  - Path: JSON Pointer to target location
+  - Value: New value for add/replace/test operations
+  - From: Source path for move/copy operations
+
+### Document Rendering
+Automatic markdown generation on patch application using pluggable RenderableModel classes. Handles file I/O for all model types (not a public API)
+
+**File:** tools/common/render.py
+
+**Status:** complete_internal_only
+
+### Workflow
+Complete knowledge tool operation workflow from API call to markdown generation.
+
+**Main Flow:**
+read JSON → validate patch → apply in memory → validate schema → write with protection → render markdown
+
+**File Protection (within Write step):**
+remove read-only → exclusive write → atomic rename → restore read-only
+
+**Main Steps:**
+  1. Read Document - Load and parse JSON file
+  2. Parse & Validate Patch - Validate RFC 6902 format
+  3. Apply in Memory - Execute patch operations on dict
+  4. Validate Schema - Check Pydantic Doc model
+  5. Write with Protection - Atomic file write with read-only management
+  6. Auto-Render Markdown - Generate .md from JSON
+
+**File Protection Phases:**
+  - Remove read-only attribute
+  - Exclusive write to temp file
+  - Atomic rename to target
+  - Restore read-only/archive attribute
+
+### File Protection Purpose
+Files are protected with read-only attributes after writing to prevent accidental corruption or modification. This applies to both JSON knowledge documents and their auto-rendered markdown pairs.
+
+```
+knowledge_tool.json
+knowledge_tool.md
+```
+
+**Purpose:**
+  - Prevent accidental overwrites of validated JSON data
+  - Ensure JSON and MD files always stay in sync (both locked together)
+  - Protect against race conditions when multiple processes access files
+  - Maintain document integrity as the source of truth for knowledge
+
+**File Locking Strategy:**
+  - Both .json and .md files are set to read-only after successful write
+  - Any modification requires removing read-only attribute first
+  - Atomic write operations ensure files are never in partial state
+  - Read-only flag restored immediately after write completes
+
+## Testing
+Comprehensive test suite with 19 tests covering all functionality.
+
+```
+pytest tools/ -v
+pytest
+```
