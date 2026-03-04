@@ -6,10 +6,12 @@ from pydantic import Field
 from knowledge_tool.models import RenderableModel
 
 
-class Test(RenderableModel):
+class TestModel(RenderableModel):
     """Test model for external/pluggable models."""
 
-    type: Literal["Test"] = "Test"
+    __test__ = False  # Prevent pytest from trying to collect this as a test class
+
+    type: Literal["TestModel"] = "TestModel"
     id: str = Field(..., description="Unique identifier")
     title: str = Field(..., description="Title")
     description: Optional[str] = Field(None, description="Description")

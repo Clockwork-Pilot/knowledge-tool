@@ -19,7 +19,7 @@ def external_models_path():
 def temp_custom_doc():
     """Create temporary test document for testing."""
     doc = {
-        "type": "Test",
+        "type": "TestModel",
         "id": "test1",
         "title": "Test Document",
         "description": "A test document",

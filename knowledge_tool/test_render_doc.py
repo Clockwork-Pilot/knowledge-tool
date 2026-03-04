@@ -8,7 +8,7 @@ import pytest
 
 from knowledge_tool.models import Doc
 from knowledge_tool.common.render import render
-from knowledge_tool.common.model_loader import get_model_registry
+from knowledge_tool.test_models.models import TestModel
 
 
 class TestDocRender:
@@ -74,67 +74,57 @@ class TestRenderWithExternalModels:
     """Test rendering with pluggable external models."""
 
     @pytest.fixture
-    def task_lifecycle_models_path(self):
-        """Path to task lifecycle models for testing."""
-        # Get the project root by going up from knowledge_tool
-        kt_root = Path(__file__).parent.parent.parent
-        return str(kt_root / "tasks_lifecycle" / "knowledge_models")
+    def test_models_path(self):
+        """Path to test models for testing external/pluggable models."""
+        # Get path to test_models directory
+        return str(Path(__file__).parent / "test_models")
 
-    def test_render_task_with_external_models(self, task_lifecycle_models_path):
-        """Test rendering a Task document using external models."""
-        task_data = {
-            "id": "task_1",
-            "type": "Task",
-            "plan": {
-                "id": "plan",
-                "label": "Test Task Plan",
-                "type": "Doc",
-                "metadata": {"created_at": "2026-03-03T00:00:00"}
-            }
-        }
+    def test_render_with_external_models(self, test_models_path):
+        """Test rendering a custom Test model using external models."""
+        test_model = TestModel(
+            id="test_1",
+            title="Test Document",
+            description="A test document",
+            metadata={"status": "active"}
+        )
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", delete=False
         ) as f:
-            json.dump(task_data, f)
+            json.dump(test_model.model_dump(), f)
             temp_path = f.name
 
         try:
             # Render with external models
-            result = render(temp_path, external_models_path=task_lifecycle_models_path)
+            result = render(temp_path, external_models_path=test_models_path)
 
             assert result is not None
-            assert "Task: task_1" in result
-            assert "Test Task Plan" in result
+            assert "# Test Document" in result
+            assert "A test document" in result
 
             # Verify markdown file was created
             md_path = Path(temp_path).with_suffix(".md")
             assert md_path.exists()
 
             md_content = md_path.read_text()
-            assert "# Task: task_1" in md_content
-            assert "## Plan" in md_content
+            assert "# Test Document" in md_content
+            assert "## Metadata" in md_content
+            assert "status" in md_content
         finally:
             Path(temp_path).unlink()
             Path(temp_path).with_suffix(".md").unlink(missing_ok=True)
 
-    def test_render_without_external_models_fails_for_task(self, task_lifecycle_models_path):
-        """Test that rendering Task without external models fails."""
-        task_data = {
-            "id": "task_1",
-            "type": "Task",
-            "plan": {
-                "id": "plan",
-                "label": "Test Task Plan",
-                "type": "Doc",
-                "metadata": {"created_at": "2026-03-03T00:00:00"}
-            }
-        }
+    def test_render_without_external_models_fails_for_unknown_type(self):
+        """Test that rendering unknown model type without external models fails."""
+        test_model = TestModel(
+            id="test_1",
+            title="Test Document"
+        )
 
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", delete=False
         ) as f:
-            json.dump(task_data, f)
+            json.dump(test_model.model_dump(), f)
             temp_path = f.name
 
         try:
