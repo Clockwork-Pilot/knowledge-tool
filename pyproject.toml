@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "y2-knowledge-tool"
+version = "0.1.0"
+description = "Knowledge-based document models for task management"
+requires-python = ">=3.9"
+dependencies = ["pydantic>=2.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
