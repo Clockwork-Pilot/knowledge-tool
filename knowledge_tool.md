@@ -42,7 +42,8 @@ Apply JSON Patch operations to knowledge documents from command line with automa
 
 **Expected Output:** ✓ Patched doc.json
 
-**With Pluggable Models:** python tools/apply_json_patch.py --models-path ./custom_models doc.json '[{"op": "replace", "path": "/type", "value": "CustomType"}]'
+**With Pluggable Models:** # Configure pluggable_models_dirs in knowledge_config.yaml, then:
+python tools/apply_json_patch.py doc.json '[{"op": "replace", "path": "/type", "value": "CustomType"}]'
 
 ##### Using Stdin for Complex Patches
 For complex JSON patches with many nested quotes, pass the patch via stdin to avoid shell escaping issues.
@@ -62,14 +63,12 @@ Python function interfaces for programmatic use
 Apply JSON Patch to document file with validation and automatic markdown rendering.
 
 ```
-apply_json_patch(document_path: str, json_patch: Optional[str] = None, create: bool = False, external_models_path: Optional[str] = None) -> Optional[ApplyPatchErrorResponse]
+apply_json_patch(document_path: str, json_patch: Optional[str] = None) -> Optional[ApplyPatchErrorResponse]
 ```
 
 **Parameters:**
-  - document_path (str): Path to Doc JSON file
+  - document_path (str): Path to JSON document file
   - json_patch (Optional[str]): RFC 6902 JSON Patch operations as JSON string. If None, only re-renders without patching (default: None)
-  - create (bool): If True, create document with patch as initial state (default: False)
-  - external_models_path (Optional[str]): Path to folder with pluggable model definitions (default: None)
 
 **Returns:** None on success, ApplyPatchErrorResponse object on error with detailed context
 
@@ -108,7 +107,7 @@ When apply_json_patch succeeds, it always attempts to regenerate the markdown fi
 **Important:** Always check stderr for warnings about rendering failures
 
 #### Pluggable Models
-Extend apply_json_patch with custom model types by loading external model definitions from a folder.
+Extend apply_json_patch with custom model types by configuring external model definitions in knowledge_config.yaml.
 
 ##### Overview
 Pluggable models allow you to define custom document types beyond the built-in Doc model. External models are loaded dynamically and work seamlessly with apply_json_patch validation and rendering.
@@ -128,9 +127,10 @@ Pluggable models allow you to define custom document types beyond the built-in D
 ##### Usage
 How to use pluggable models with apply_json_patch.
 
-**Command Line:** python tools/apply_json_patch.py --models-path ./custom_models doc.json '[{"op": "replace", "path": "/type", "value": "CustomType"}]'
+**Command Line:** # Configure pluggable_models_dirs in knowledge_config.yaml, then:
+apply-json-patch doc.json '[{"op": "replace", "path": "/type", "value": "CustomType"}]'
 
-**Python Function:** apply_json_patch(document_path, json_patch, external_models_path='./custom_models')
+**Python Function:** apply_json_patch(document_path, json_patch)
 
 **Folder Structure:** custom_models/
   my_model.py      # Contains class MyModel(RenderableModel)

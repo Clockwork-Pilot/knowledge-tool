@@ -136,7 +136,7 @@
               "metadata": {
                 "example_code": "python tools/apply_json_patch.py doc.json '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"New Label\"}]'",
                 "expected_output": "\u2713 Patched doc.json",
-                "with_pluggable_models": "python tools/apply_json_patch.py --models-path ./custom_models doc.json '[{\"op\": \"replace\", \"path\": \"/type\", \"value\": \"CustomType\"}]'"
+                "with_pluggable_models": "# Configure pluggable_models_dirs in knowledge_config.yaml, then:\npython tools/apply_json_patch.py doc.json '[{\"op\": \"replace\", \"path\": \"/type\", \"value\": \"CustomType\"}]'"
               },
               "children": {
                 "stdin_support": {
@@ -169,10 +169,8 @@
               "description": "Apply JSON Patch to document file with validation and automatic markdown rendering.",
               "metadata": {
                 "parameters": [
-                  "document_path (str): Path to Doc JSON file",
-                  "json_patch (Optional[str]): RFC 6902 JSON Patch operations as JSON string. If None, only re-renders without patching (default: None)",
-                  "create (bool): If True, create document with patch as initial state (default: False)",
-                  "external_models_path (Optional[str]): Path to folder with pluggable model definitions (default: None)"
+                  "document_path (str): Path to JSON document file",
+                  "json_patch (Optional[str]): RFC 6902 JSON Patch operations as JSON string. If None, only re-renders without patching (default: None)"
                 ],
                 "returns": "None on success, ApplyPatchErrorResponse object on error with detailed context",
                 "exceptions": [
@@ -184,7 +182,7 @@
                 "behavior": "All exceptions caught and returned as ApplyPatchErrorResponse with helpful hints",
                 "safety": "Atomic operations, in-memory validation before write, file protection workflow, read-only file management",
                 "rendering": "Every successful patch automatically generates markdown: document.json \u2192 document.md with identical file protection",
-                "code": "apply_json_patch(document_path: str, json_patch: Optional[str] = None, create: bool = False, external_models_path: Optional[str] = None) -> Optional[ApplyPatchErrorResponse]"
+                "code": "apply_json_patch(document_path: str, json_patch: Optional[str] = None) -> Optional[ApplyPatchErrorResponse]"
               },
               "children": {
                 "rendering_behavior": {
@@ -219,7 +217,7 @@
               "type": "Doc",
               "id": "pluggable_models",
               "label": "Pluggable Models",
-              "description": "Extend apply_json_patch with custom model types by loading external model definitions from a folder.",
+              "description": "Extend apply_json_patch with custom model types by configuring external model definitions in knowledge_config.yaml.",
               "metadata": {},
               "children": {
                 "overview": {
@@ -248,8 +246,8 @@
                   "label": "Usage",
                   "description": "How to use pluggable models with apply_json_patch.",
                   "metadata": {
-                    "command_line": "python tools/apply_json_patch.py --models-path ./custom_models doc.json '[{\"op\": \"replace\", \"path\": \"/type\", \"value\": \"CustomType\"}]'",
-                    "python_function": "apply_json_patch(document_path, json_patch, external_models_path='./custom_models')",
+                    "command_line": "# Configure pluggable_models_dirs in knowledge_config.yaml, then:\napply-json-patch doc.json '[{\"op\": \"replace\", \"path\": \"/type\", \"value\": \"CustomType\"}]'",
+                    "python_function": "apply_json_patch(document_path, json_patch)",
                     "folder_structure": "custom_models/\n  my_model.py      # Contains class MyModel(RenderableModel)\n  other_model.py   # Contains class OtherModel(RenderableModel)"
                   }
                 },

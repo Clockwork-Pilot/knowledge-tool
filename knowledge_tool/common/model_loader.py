@@ -99,7 +99,7 @@ def load_external_models(external_models_path: str) -> Dict[str, Type[Renderable
     return external_models
 
 
-def load_config() -> Dict:
+def load_config() -> tuple[Dict, Path]:
     """
     Load knowledge tool configuration from knowledge_config.yaml.
 
@@ -109,7 +109,7 @@ def load_config() -> Dict:
     3. Default empty config if file not found
 
     Returns:
-        Configuration dictionary with pluggable_models_dirs list
+        Tuple of (config dict, config file path)
     """
     config_filename = "knowledge_config.yaml"
 
@@ -126,44 +126,45 @@ def load_config() -> Dict:
         try:
             with open(config_path, 'r') as f:
                 config = yaml.safe_load(f) or {}
-                return config
+                return config, config_path
         except Exception as e:
             print(f"Warning: Failed to load config from {config_path}: {e}", file=sys.stderr)
-            return {}
+            return {}, config_path
 
-    return {}
+    return {}, config_path
 
 
 def resolve_pluggable_models_dirs(external_models_path: Optional[str] = None) -> List[Path]:
     """
     Resolve pluggable model directories from config and environment.
 
+    Paths in knowledge_config.yaml are resolved relative to the config file location.
+
     Priority:
-    1. Explicit external_models_path argument (--models-path CLI flag)
-    2. pluggable_models_dirs from knowledge_config.yaml
-    3. Empty list (only built-in models)
+    1. pluggable_models_dirs from knowledge_config.yaml
+    2. Empty list (only built-in models)
 
     Args:
-        external_models_path: Optional explicit path to external models
+        external_models_path: Deprecated. Use knowledge_config.yaml instead.
 
     Returns:
         List of Path objects to search for models
     """
     if external_models_path:
-        # Explicit path takes priority
+        # Explicit path takes priority (for backwards compatibility)
         return [Path(external_models_path)]
 
-    # Load from config
-    config = load_config()
+    # Load from config and get config file location
+    config, config_path = load_config()
     dirs = config.get('pluggable_models_dirs', []) or []
 
     # Resolve relative paths from config file location
-    config_root = Path(os.getenv('KNOWLEDGE_TOOL_CONFIG_ROOT', '.'))
+    config_root = config_path.parent
     resolved_dirs = []
 
     for dir_path in dirs:
         path = Path(dir_path)
-        # Make absolute if relative
+        # Make absolute if relative (relative to config file location)
         if not path.is_absolute():
             path = config_root / path
         resolved_dirs.append(path)
@@ -176,8 +177,7 @@ def get_model_registry(external_models_path: Optional[str] = None) -> Dict[str, 
     Get combined model registry with built-in and pluggable models.
 
     Built-in models are always included. External models are loaded from:
-    - Explicit external_models_path parameter (--models-path flag)
-    - pluggable_models_dirs from knowledge_config.yaml
+    - pluggable_models_dirs specified in knowledge_config.yaml
 
     Args:
         external_models_path: Optional explicit path to external models folder
