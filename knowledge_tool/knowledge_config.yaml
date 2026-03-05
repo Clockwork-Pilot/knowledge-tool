@@ -1,0 +1,18 @@
+# Knowledge Tool Configuration
+#
+# This file configures pluggable model directories for the knowledge tool.
+# Place this file in the same directory as apply_json_patch.py script, or
+# set KNOWLEDGE_TOOL_CONFIG_ROOT environment variable to override the config location.
+#
+# The knowledge tool always loads built-in models. External models from
+# pluggable_models_dirs are merged with built-in models.
+
+# List of directories containing custom/pluggable knowledge models
+# Paths are relative to this config file location
+# Examples:
+#   - ./models
+#   - ./custom_models
+#   - /absolute/path/to/models
+pluggable_models_dirs:
+  # - ./models
+  # - ./custom_models

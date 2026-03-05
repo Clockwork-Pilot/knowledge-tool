@@ -251,7 +251,10 @@ def main() -> None:
         print("\nOptions:", file=sys.stderr)
         print("  --stdin               Read patch from stdin instead of argument", file=sys.stderr)
         print("  --schema, --schemas   Print schemas for available models and exit", file=sys.stderr)
-        print("  --models-path PATH    Path to external/pluggable models folder", file=sys.stderr)
+        print("  --models-path PATH    Path to external/pluggable models folder (overrides config)", file=sys.stderr)
+        print("\nConfiguration:", file=sys.stderr)
+        print("  knowledge_config.yaml - Configure pluggable_models_dirs (see example in knowledge_tool/)", file=sys.stderr)
+        print("  KNOWLEDGE_TOOL_CONFIG_ROOT - Override config file location (env var)", file=sys.stderr)
         print("\nExamples:", file=sys.stderr)
         print(
             '  python3 apply_json_patch.py doc.json \'[{"op": "replace", "path": "/label", "value": "new"}]\'',

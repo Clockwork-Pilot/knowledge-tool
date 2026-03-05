@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Load models dynamically from external folders."""
+"""Load models dynamically from external folders based on configuration."""
 
 import sys
+import os
+import yaml
 import importlib.util
 from pathlib import Path
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, List
 from knowledge_tool.models import MODEL_REGISTRY, RenderableModel
 
 
@@ -97,22 +99,108 @@ def load_external_models(external_models_path: str) -> Dict[str, Type[Renderable
     return external_models
 
 
-def get_model_registry(external_models_path: Optional[str] = None) -> Dict[str, Type[RenderableModel]]:
+def load_config() -> Dict:
     """
-    Get combined model registry with optional external models.
+    Load knowledge tool configuration from knowledge_config.yaml.
+
+    Resolution order:
+    1. KNOWLEDGE_TOOL_CONFIG_ROOT environment variable (if set)
+    2. Same directory as apply_json_patch.py script
+    3. Default empty config if file not found
+
+    Returns:
+        Configuration dictionary with pluggable_models_dirs list
+    """
+    config_filename = "knowledge_config.yaml"
+
+    # 1. Check environment variable override
+    if config_root := os.getenv('KNOWLEDGE_TOOL_CONFIG_ROOT'):
+        config_path = Path(config_root) / config_filename
+    else:
+        # 2. Look in same directory as this module (apply_json_patch location)
+        script_dir = Path(__file__).parent.parent
+        config_path = script_dir / config_filename
+
+    # Load config if exists
+    if config_path.exists():
+        try:
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f) or {}
+                return config
+        except Exception as e:
+            print(f"Warning: Failed to load config from {config_path}: {e}", file=sys.stderr)
+            return {}
+
+    return {}
+
+
+def resolve_pluggable_models_dirs(external_models_path: Optional[str] = None) -> List[Path]:
+    """
+    Resolve pluggable model directories from config and environment.
+
+    Priority:
+    1. Explicit external_models_path argument (--models-path CLI flag)
+    2. pluggable_models_dirs from knowledge_config.yaml
+    3. Empty list (only built-in models)
 
     Args:
-        external_models_path: Optional path to external models folder
+        external_models_path: Optional explicit path to external models
+
+    Returns:
+        List of Path objects to search for models
+    """
+    if external_models_path:
+        # Explicit path takes priority
+        return [Path(external_models_path)]
+
+    # Load from config
+    config = load_config()
+    dirs = config.get('pluggable_models_dirs', [])
+
+    # Resolve relative paths from config file location
+    config_root = Path(os.getenv('KNOWLEDGE_TOOL_CONFIG_ROOT', '.'))
+    resolved_dirs = []
+
+    for dir_path in dirs:
+        path = Path(dir_path)
+        # Make absolute if relative
+        if not path.is_absolute():
+            path = config_root / path
+        resolved_dirs.append(path)
+
+    return resolved_dirs
+
+
+def get_model_registry(external_models_path: Optional[str] = None) -> Dict[str, Type[RenderableModel]]:
+    """
+    Get combined model registry with built-in and pluggable models.
+
+    Built-in models are always included. External models are loaded from:
+    - Explicit external_models_path parameter (--models-path flag)
+    - pluggable_models_dirs from knowledge_config.yaml
+
+    Args:
+        external_models_path: Optional explicit path to external models folder
 
     Returns:
         Dictionary mapping model type names to model classes
     """
-    # Start with default registry
+    # Start with default registry (built-in models always included)
     registry = MODEL_REGISTRY.copy()
 
-    # Load and merge external models if path provided
-    if external_models_path:
-        external = load_external_models(external_models_path)
-        registry.update(external)
+    # Resolve pluggable model directories
+    model_dirs = resolve_pluggable_models_dirs(external_models_path)
+
+    # Load and merge external models from all configured directories
+    for dir_path in model_dirs:
+        if dir_path.exists():
+            try:
+                external = load_external_models(str(dir_path))
+                registry.update(external)
+            except ValueError as e:
+                # Directory exists but has no valid models, skip it
+                pass
+        else:
+            print(f"Warning: Pluggable models directory not found: {dir_path}", file=sys.stderr)
 
     return registry
