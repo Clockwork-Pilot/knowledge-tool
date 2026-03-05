@@ -132,7 +132,7 @@
               "type": "Doc",
               "id": "apply_json_patch_script",
               "label": "apply_json_patch.py",
-              "description": "Apply JSON Patch operations to knowledge documents from command line with automatic markdown rendering. Supports both command-line arguments and stdin input to avoid shell escaping issues. Works with built-in models and pluggable custom models.",
+              "description": "Apply JSON Patch operations to knowledge documents from command line with automatic markdown rendering. Supports both command-line arguments and stdin input to avoid shell escaping issues. Works with built-in models and pluggable custom models configured in knowledge_config.yaml.",
               "metadata": {
                 "example_code": "python tools/apply_json_patch.py doc.json '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"New Label\"}]'",
                 "expected_output": "\u2713 Patched doc.json",
@@ -217,7 +217,7 @@
               "type": "Doc",
               "id": "pluggable_models",
               "label": "Pluggable Models",
-              "description": "Extend apply_json_patch with custom model types by configuring external model definitions in knowledge_config.yaml.",
+              "description": "Extend apply_json_patch with custom model types by configuring external model definitions in knowledge_config.yaml. Models are auto-discovered based on environment variables: KNOWLEDGE_TOOL_CONFIG_ROOT, CLAUDE_PLUGIN_ROOT, or CLAUDE_PROJECT_ROOT.",
               "metadata": {},
               "children": {
                 "overview": {
@@ -246,9 +246,9 @@
                   "label": "Usage",
                   "description": "How to use pluggable models with apply_json_patch.",
                   "metadata": {
-                    "command_line": "# Configure pluggable_models_dirs in knowledge_config.yaml, then:\napply-json-patch doc.json '[{\"op\": \"replace\", \"path\": \"/type\", \"value\": \"CustomType\"}]'",
+                    "command_line": "# Models configured in knowledge_config.yaml are auto-discovered\napply-json-patch doc.json '[{\"op\": \"replace\", \"path\": \"/type\", \"value\": \"CustomType\"}]'",
                     "python_function": "apply_json_patch(document_path, json_patch)",
-                    "folder_structure": "custom_models/\n  my_model.py      # Contains class MyModel(RenderableModel)\n  other_model.py   # Contains class OtherModel(RenderableModel)"
+                    "folder_structure": "# Configure in knowledge_config.yaml:\npluggable_models_dirs:\n  - ./models\n  - ./custom_models\n\n# File structure:\ncustom_models/\n  my_model.py      # Contains class MyModel(RenderableModel)\n  other_model.py   # Contains class OtherModel(RenderableModel)"
                   }
                 },
                 "creating_models": {
@@ -288,6 +288,55 @@
               }
             }
           }
+        },
+        "configuration": {
+          "type": "Doc",
+          "id": "configuration",
+          "label": "Configuration",
+          "description": "Knowledge tool models are configured via knowledge_config.yaml file. The tool automatically searches for this file in the following locations, in priority order.",
+          "metadata": {},
+          "children": {
+            "config_file": {
+              "type": "Doc",
+              "id": "config_file",
+              "label": "knowledge_config.yaml",
+              "description": "YAML configuration file that defines pluggable model directories. List directories containing custom RenderableModel implementations.",
+              "metadata": {
+                "example": "pluggable_models_dirs:\n  - ./models\n  - ./custom_models\n  - /absolute/path/to/models"
+              }
+            },
+            "env_vars": {
+              "type": "Doc",
+              "id": "env_vars",
+              "label": "Environment Variables",
+              "description": "Control where knowledge_config.yaml is searched for.",
+              "metadata": {
+                "resolution_order": [
+                  "1. KNOWLEDGE_TOOL_CONFIG_ROOT - Highest priority, explicitly set config directory",
+                  "2. CLAUDE_PLUGIN_ROOT - When used as a Claude plugin",
+                  "3. CLAUDE_PROJECT_ROOT - When used in a Claude project",
+                  "4. Script directory (knowledge_tool/) - Default fallback",
+                  "5. Empty config if not found - Only built-in models (Doc, Task, etc.)"
+                ],
+                "examples": [
+                  "KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge-tool apply-json-patch doc.json '[...]'",
+                  "CLAUDE_PLUGIN_ROOT=/path/to/plugin apply-json-patch doc.json '[...]'",
+                  "CLAUDE_PROJECT_ROOT=/path/to/project apply-json-patch doc.json '[...]'"
+                ]
+              }
+            },
+            "auto_discovery": {
+              "type": "Doc",
+              "id": "auto_discovery",
+              "label": "Automatic Discovery",
+              "description": "When used as a Claude plugin or in a Claude project, knowledge_config.yaml is automatically found without manual configuration.",
+              "metadata": {
+                "plugin_usage": "Tool automatically uses CLAUDE_PLUGIN_ROOT to find knowledge_config.yaml",
+                "project_usage": "Tool automatically uses CLAUDE_PROJECT_ROOT to find knowledge_config.yaml",
+                "manual_override": "Set KNOWLEDGE_TOOL_CONFIG_ROOT to explicitly specify config location"
+              }
+            }
+          }
         }
       }
     },
@@ -295,7 +344,7 @@
       "type": "Doc",
       "id": "file_modification_workflow",
       "label": "File Modification Workflow",
-      "description": "How to properly modify knowledge documents using the tool.",
+      "description": "How to properly modify knowledge documents using the tool. Models are loaded automatically from knowledge_config.yaml based on environment variables (KNOWLEDGE_TOOL_CONFIG_ROOT, CLAUDE_PLUGIN_ROOT, CLAUDE_PROJECT_ROOT).",
       "metadata": {
         "important": "ALWAYS use apply_json_patch to modify documents. Never edit JSON files directly.",
         "workflow": [
