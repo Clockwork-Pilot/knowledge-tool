@@ -14,14 +14,14 @@ from typing import Optional
 from .file_tools import write_protected_file
 
 
-def render(document_path: str, external_models_path: Optional[str] = None) -> Optional[str]:
+def render(document_path: str) -> Optional[str]:
     """Render any model type to markdown and save to .md file.
 
     Supports Doc, Task, and any future RenderableModel type.
+    External/pluggable models are loaded from knowledge_config.yaml.
 
     Args:
         document_path: Path to document JSON file
-        external_models_path: Optional path to external/pluggable model definitions
 
     Returns:
         Markdown string on success, None on error
@@ -41,9 +41,9 @@ def render(document_path: str, external_models_path: Optional[str] = None) -> Op
         print(f"Error reading document: {str(e)}", file=sys.stderr)
         return None
 
-    # Get model type and instantiate correct class (with external models support)
+    # Get model type and instantiate correct class (external models from config)
     model_type = doc_dict.get("type", "Doc")
-    model_registry = get_model_registry(external_models_path)
+    model_registry = get_model_registry()
     ModelClass = model_registry.get(model_type)
 
     if not ModelClass:

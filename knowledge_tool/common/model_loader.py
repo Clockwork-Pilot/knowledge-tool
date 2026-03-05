@@ -155,7 +155,7 @@ def resolve_pluggable_models_dirs(external_models_path: Optional[str] = None) ->
 
     # Load from config
     config = load_config()
-    dirs = config.get('pluggable_models_dirs', [])
+    dirs = config.get('pluggable_models_dirs', []) or []
 
     # Resolve relative paths from config file location
     config_root = Path(os.getenv('KNOWLEDGE_TOOL_CONFIG_ROOT', '.'))

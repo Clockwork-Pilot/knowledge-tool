@@ -18,14 +18,16 @@ from knowledge_tool.common.model_loader import get_model_registry
 
 def apply_json_patch(
     document_path: str,
-    json_patch: Optional[str] = None,
-    external_models_path: Optional[str] = None
+    json_patch: Optional[str] = None
 ) -> Optional[ApplyPatchErrorResponse]:
     """
     Apply JSON Patch to document file with validation and automatic markdown rendering.
 
     Automatically creates new documents if a patch is provided. If json_patch is None,
     only re-renders an existing document without patching.
+
+    External/pluggable models are configured via knowledge_config.yaml or KNOWLEDGE_TOOL_CONFIG_ROOT
+    environment variable. Built-in models are always available.
 
     Process:
     1. Read document from file, or start with empty dict if document doesn't exist (when patch is provided)
@@ -39,8 +41,6 @@ def apply_json_patch(
     Args:
         document_path: Path to document JSON file
         json_patch: JSON Patch operations as JSON string (RFC 6902 format). If None, only re-renders existing document.
-        create: Deprecated. Documents are now created automatically when a patch is provided.
-        external_models_path: Optional path to folder with external/pluggable model definitions
 
     Returns:
         None on success, ApplyPatchErrorResponse on error
@@ -96,7 +96,7 @@ def apply_json_patch(
     # 5. Validate against correct model type
     try:
         model_type = patched_dict.get("type", "Doc")
-        model_registry = get_model_registry(external_models_path)
+        model_registry = get_model_registry()
         ModelClass = model_registry.get(model_type)
 
         if not ModelClass:
@@ -133,7 +133,7 @@ def apply_json_patch(
 
     # 7. Render markdown representation
     try:
-        render(str(doc_path), external_models_path=external_models_path)
+        render(str(doc_path))
     except Exception as e:
         # Rendering failure doesn't fail the patch operation
         # JSON was updated successfully, but warn the user
@@ -245,43 +245,19 @@ def main() -> None:
     """CLI entry point."""
     if len(sys.argv) < 2:
         print(
-            "Usage: python3 apply_json_patch.py [--stdin] [--schemas] [--models-path PATH] <document_path> [json_patch]",
+            "Usage: python3 apply_json_patch.py [--stdin] [--schemas] <document_path> [json_patch]",
             file=sys.stderr,
         )
         print("\nOptions:", file=sys.stderr)
         print("  --stdin               Read patch from stdin instead of argument", file=sys.stderr)
         print("  --schema, --schemas   Print schemas for available models and exit", file=sys.stderr)
-        print("  --models-path PATH    Path to external/pluggable models folder (overrides config)", file=sys.stderr)
-        print("\nConfiguration:", file=sys.stderr)
-        print("  knowledge_config.yaml - Configure pluggable_models_dirs (see example in knowledge_tool/)", file=sys.stderr)
-        print("  KNOWLEDGE_TOOL_CONFIG_ROOT - Override config file location (env var)", file=sys.stderr)
         print("\nExamples:", file=sys.stderr)
         print(
             '  python3 apply_json_patch.py doc.json \'[{"op": "replace", "path": "/label", "value": "new"}]\'',
             file=sys.stderr,
         )
         print(
-            '  python3 apply_json_patch.py doc.json \'[{"op": "add", "path": "/id", "value": "doc1"}]\'  # Creates if missing',
-            file=sys.stderr,
-        )
-        print(
             '  cat patch.json | python3 apply_json_patch.py --stdin doc.json',
-            file=sys.stderr,
-        )
-        print(
-            '  python3 apply_json_patch.py --schemas',
-            file=sys.stderr,
-        )
-        print(
-            '  python3 apply_json_patch.py --models-path ./custom_models --schemas',
-            file=sys.stderr,
-        )
-        print(
-            '  python3 apply_json_patch.py --models-path ./custom_models doc.json \'[{"op": "replace", "path": "/type", "value": "CustomType"}]\'',
-            file=sys.stderr,
-        )
-        print(
-            '  python3 apply_json_patch.py doc.json  # Re-render only',
             file=sys.stderr,
         )
         sys.exit(1)
@@ -290,7 +266,6 @@ def main() -> None:
     stdin_mode = False
     schemas_mode = False
     json_patch = None
-    external_models_path = None
 
     idx = 1
     # Parse flags
@@ -299,12 +274,6 @@ def main() -> None:
             stdin_mode = True
         elif sys.argv[idx] in ("--schema", "--schemas"):
             schemas_mode = True
-        elif sys.argv[idx] == "--models-path":
-            idx += 1
-            if idx >= len(sys.argv):
-                print("Error: --models-path requires a path argument", file=sys.stderr)
-                sys.exit(1)
-            external_models_path = sys.argv[idx]
         else:
             print(f"Error: Unknown flag {sys.argv[idx]}", file=sys.stderr)
             sys.exit(1)
@@ -313,7 +282,7 @@ def main() -> None:
     # Handle --schemas mode
     if schemas_mode:
         try:
-            model_registry = get_model_registry(external_models_path)
+            model_registry = get_model_registry()
             schemas = {}
             for model_name, model_class in model_registry.items():
                 schemas[model_name] = model_class.model_json_schema()
@@ -343,7 +312,7 @@ def main() -> None:
         # Patch provided as argument
         json_patch = sys.argv[idx]
 
-    result = apply_json_patch(document_path, json_patch, external_models_path=external_models_path)
+    result = apply_json_patch(document_path, json_patch)
 
     if result:
         # Error occurred
