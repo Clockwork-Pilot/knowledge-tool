@@ -240,17 +240,17 @@ def _get_path_value(doc: Dict, path: str) -> Any:
     return current
 
 
-if __name__ == "__main__":
-    import sys
-
+def main() -> None:
+    """CLI entry point."""
     if len(sys.argv) < 2:
         print(
-            "Usage: python3 apply_json_patch.py [--create] [--stdin] [--models-path PATH] <document_path> [json_patch]",
+            "Usage: python3 apply_json_patch.py [--create] [--stdin] [--schemas] [--models-path PATH] <document_path> [json_patch]",
             file=sys.stderr,
         )
         print("\nOptions:", file=sys.stderr)
         print("  --create              Create new document if it doesn't exist", file=sys.stderr)
         print("  --stdin               Read patch from stdin instead of argument", file=sys.stderr)
+        print("  --schema, --schemas   Print schemas for available models and exit", file=sys.stderr)
         print("  --models-path PATH    Path to external/pluggable models folder", file=sys.stderr)
         print("\nExamples:", file=sys.stderr)
         print(
@@ -266,6 +266,14 @@ if __name__ == "__main__":
             file=sys.stderr,
         )
         print(
+            '  python3 apply_json_patch.py --schemas',
+            file=sys.stderr,
+        )
+        print(
+            '  python3 apply_json_patch.py --models-path ./custom_models --schemas',
+            file=sys.stderr,
+        )
+        print(
             '  python3 apply_json_patch.py --models-path ./custom_models doc.json \'[{"op": "replace", "path": "/type", "value": "CustomType"}]\'',
             file=sys.stderr,
         )
@@ -278,6 +286,7 @@ if __name__ == "__main__":
     # Parse arguments
     create = False
     stdin_mode = False
+    schemas_mode = False
     json_patch = None
     external_models_path = None
 
@@ -288,6 +297,8 @@ if __name__ == "__main__":
             create = True
         elif sys.argv[idx] == "--stdin":
             stdin_mode = True
+        elif sys.argv[idx] in ("--schema", "--schemas"):
+            schemas_mode = True
         elif sys.argv[idx] == "--models-path":
             idx += 1
             if idx >= len(sys.argv):
@@ -299,13 +310,28 @@ if __name__ == "__main__":
             sys.exit(1)
         idx += 1
 
-    # Get document path (required)
-    if idx >= len(sys.argv):
-        print("Error: document_path is required", file=sys.stderr)
-        sys.exit(1)
+    # Handle --schemas mode
+    if schemas_mode:
+        try:
+            model_registry = get_model_registry(external_models_path)
+            schemas = {}
+            for model_name, model_class in model_registry.items():
+                schemas[model_name] = model_class.model_json_schema()
+            print(json.dumps(schemas, indent=2))
+            sys.exit(0)
+        except Exception as e:
+            print(f"Error: Failed to load schemas: {str(e)}", file=sys.stderr)
+            sys.exit(1)
 
-    document_path = sys.argv[idx]
-    idx += 1
+    # Get document path (required, unless in --schemas mode)
+    if schemas_mode:
+        document_path = None
+    else:
+        if idx >= len(sys.argv):
+            print("Error: document_path is required", file=sys.stderr)
+            sys.exit(1)
+        document_path = sys.argv[idx]
+        idx += 1
 
     # Get patch from argument or stdin
     if stdin_mode:
@@ -338,3 +364,7 @@ if __name__ == "__main__":
         print(f"✓ {action} {document_path}")
         print(f"✓ Rendered {md_path}")
         sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
