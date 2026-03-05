@@ -245,12 +245,12 @@ def main() -> None:
     """CLI entry point."""
     if len(sys.argv) < 2:
         print(
-            "Usage: python3 apply_json_patch.py [--stdin] [--schemas] <document_path> [json_patch]",
+            "Usage: python3 apply_json_patch.py [--stdin] [--schema] <document_path> [json_patch]",
             file=sys.stderr,
         )
         print("\nOptions:", file=sys.stderr)
-        print("  --stdin               Read patch from stdin instead of argument", file=sys.stderr)
-        print("  --schema, --schemas   Print schemas for available models and exit", file=sys.stderr)
+        print("  --stdin    Read patch from stdin instead of argument", file=sys.stderr)
+        print("  --schema   Print JSON schema for model type in document", file=sys.stderr)
         print("\nExamples:", file=sys.stderr)
         print(
             '  python3 apply_json_patch.py doc.json \'[{"op": "replace", "path": "/label", "value": "new"}]\'',
@@ -258,6 +258,14 @@ def main() -> None:
         )
         print(
             '  cat patch.json | python3 apply_json_patch.py --stdin doc.json',
+            file=sys.stderr,
+        )
+        print(
+            '  python3 apply_json_patch.py doc.json --schema  # Print schema for model in doc.json',
+            file=sys.stderr,
+        )
+        print(
+            '  python3 apply_json_patch.py doc.json  # Re-render only',
             file=sys.stderr,
         )
         sys.exit(1)
@@ -272,35 +280,56 @@ def main() -> None:
     while idx < len(sys.argv) and sys.argv[idx].startswith("--"):
         if sys.argv[idx] == "--stdin":
             stdin_mode = True
-        elif sys.argv[idx] in ("--schema", "--schemas"):
+        elif sys.argv[idx] == "--schema":
             schemas_mode = True
         else:
             print(f"Error: Unknown flag {sys.argv[idx]}", file=sys.stderr)
             sys.exit(1)
         idx += 1
 
-    # Handle --schemas mode
+    # Get document path (always required)
+    if idx >= len(sys.argv):
+        print("Error: document_path is required", file=sys.stderr)
+        sys.exit(1)
+    document_path = sys.argv[idx]
+    idx += 1
+
+    # Check for --schema flag after document path
+    if idx < len(sys.argv) and sys.argv[idx] == "--schema":
+        schemas_mode = True
+        idx += 1
+
+    # Handle --schema mode: print schema for model in document
     if schemas_mode:
         try:
-            model_registry = get_model_registry()
-            schemas = {}
-            for model_name, model_class in model_registry.items():
-                schemas[model_name] = model_class.model_json_schema()
-            print(json.dumps(schemas, indent=2))
-            sys.exit(0)
-        except Exception as e:
-            print(f"Error: Failed to load schemas: {str(e)}", file=sys.stderr)
-            sys.exit(1)
+            doc_path = Path(document_path)
+            if not doc_path.exists():
+                print(f"Error: Document not found: {document_path}", file=sys.stderr)
+                sys.exit(1)
 
-    # Get document path (required, unless in --schemas mode)
-    if schemas_mode:
-        document_path = None
-    else:
-        if idx >= len(sys.argv):
-            print("Error: document_path is required", file=sys.stderr)
+            # Read document to get model type
+            doc_content = doc_path.read_text(encoding="utf-8")
+            doc_dict = json.loads(doc_content)
+            model_type = doc_dict.get("type", "Doc")
+
+            # Get schema for this model type
+            model_registry = get_model_registry()
+            ModelClass = model_registry.get(model_type)
+
+            if not ModelClass:
+                print(f"Error: Unknown model type: {model_type}", file=sys.stderr)
+                sys.exit(1)
+
+            # Print schema
+            schema = ModelClass.model_json_schema()
+            print(json.dumps(schema, indent=2))
+            sys.exit(0)
+        except json.JSONDecodeError as e:
+            print(f"Error: Invalid JSON in {document_path}: {str(e)}", file=sys.stderr)
             sys.exit(1)
-        document_path = sys.argv[idx]
-        idx += 1
+        except Exception as e:
+            print(f"Error: Failed to load schema: {str(e)}", file=sys.stderr)
+            sys.exit(1)
 
     # Get patch from argument or stdin
     if stdin_mode:
