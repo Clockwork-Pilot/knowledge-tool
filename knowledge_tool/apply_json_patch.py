@@ -19,16 +19,16 @@ from knowledge_tool.common.model_loader import get_model_registry
 def apply_json_patch(
     document_path: str,
     json_patch: Optional[str] = None,
-    create: bool = False,
     external_models_path: Optional[str] = None
 ) -> Optional[ApplyPatchErrorResponse]:
     """
     Apply JSON Patch to document file with validation and automatic markdown rendering.
 
-    If json_patch is None, only re-renders the document without patching.
+    Automatically creates new documents if a patch is provided. If json_patch is None,
+    only re-renders an existing document without patching.
 
     Process:
-    1. Read document from file (or create if create=True and document doesn't exist)
+    1. Read document from file, or start with empty dict if document doesn't exist (when patch is provided)
     2. If json_patch provided:
        a. Parse and validate JSON Patch (RFC 6902)
        b. Apply patch in memory
@@ -38,8 +38,8 @@ def apply_json_patch(
 
     Args:
         document_path: Path to document JSON file
-        json_patch: JSON Patch operations as JSON string (RFC 6902 format). If None, only re-renders.
-        create: If True, create document with patch as initial state (default: False)
+        json_patch: JSON Patch operations as JSON string (RFC 6902 format). If None, only re-renders existing document.
+        create: Deprecated. Documents are now created automatically when a patch is provided.
         external_models_path: Optional path to folder with external/pluggable model definitions
 
     Returns:
@@ -50,13 +50,14 @@ def apply_json_patch(
 
     # 1. Read document or initialize empty
     if not doc_path.exists():
-        if not create:
+        # If no patch provided, can't re-render a non-existent document
+        if json_patch is None:
             return ApplyPatchErrorResponse(
                 error=f"Document not found: {document_path}",
                 operation=operation,
-                hint="Use create=True flag to create new documents"
+                hint="Provide a patch to create a new document or ensure the file exists to re-render"
             )
-        # Start with empty doc dict for creation
+        # Start with empty doc dict for creation (implicit when patch is provided)
         doc_dict = {}
     else:
         try:
@@ -244,11 +245,10 @@ def main() -> None:
     """CLI entry point."""
     if len(sys.argv) < 2:
         print(
-            "Usage: python3 apply_json_patch.py [--create] [--stdin] [--schemas] [--models-path PATH] <document_path> [json_patch]",
+            "Usage: python3 apply_json_patch.py [--stdin] [--schemas] [--models-path PATH] <document_path> [json_patch]",
             file=sys.stderr,
         )
         print("\nOptions:", file=sys.stderr)
-        print("  --create              Create new document if it doesn't exist", file=sys.stderr)
         print("  --stdin               Read patch from stdin instead of argument", file=sys.stderr)
         print("  --schema, --schemas   Print schemas for available models and exit", file=sys.stderr)
         print("  --models-path PATH    Path to external/pluggable models folder", file=sys.stderr)
@@ -258,7 +258,7 @@ def main() -> None:
             file=sys.stderr,
         )
         print(
-            '  python3 apply_json_patch.py --create doc.json \'[{"op": "add", "path": "/id", "value": "doc1"}]\'',
+            '  python3 apply_json_patch.py doc.json \'[{"op": "add", "path": "/id", "value": "doc1"}]\'  # Creates if missing',
             file=sys.stderr,
         )
         print(
@@ -284,7 +284,6 @@ def main() -> None:
         sys.exit(1)
 
     # Parse arguments
-    create = False
     stdin_mode = False
     schemas_mode = False
     json_patch = None
@@ -293,9 +292,7 @@ def main() -> None:
     idx = 1
     # Parse flags
     while idx < len(sys.argv) and sys.argv[idx].startswith("--"):
-        if sys.argv[idx] == "--create":
-            create = True
-        elif sys.argv[idx] == "--stdin":
+        if sys.argv[idx] == "--stdin":
             stdin_mode = True
         elif sys.argv[idx] in ("--schema", "--schemas"):
             schemas_mode = True
@@ -343,7 +340,7 @@ def main() -> None:
         # Patch provided as argument
         json_patch = sys.argv[idx]
 
-    result = apply_json_patch(document_path, json_patch, create=create, external_models_path=external_models_path)
+    result = apply_json_patch(document_path, json_patch, external_models_path=external_models_path)
 
     if result:
         # Error occurred
@@ -352,10 +349,8 @@ def main() -> None:
         sys.exit(1)
     else:
         # Success
-        if create:
-            action = "Created"
-        elif json_patch is not None:
-            action = "Patched"
+        if json_patch is not None:
+            action = "Patched/Created"
         else:
             action = "Re-rendered"
 
