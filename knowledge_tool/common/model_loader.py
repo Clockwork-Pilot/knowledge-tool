@@ -105,24 +105,33 @@ def load_config() -> tuple[Dict, Path]:
 
     Resolution order:
     1. KNOWLEDGE_TOOL_CONFIG_ROOT environment variable (if set)
-    2. Same directory as apply_json_patch.py script
-    3. Default empty config if file not found
+    2. CLAUDE_PLUGIN_ROOT environment variable (if set)
+    3. CLAUDE_PROJECT_ROOT environment variable (if set)
+    4. Same directory as apply_json_patch.py script
+    5. Default empty config if file not found (no extra models)
 
     Returns:
         Tuple of (config dict, config file path)
     """
     config_filename = "knowledge_config.yaml"
+    config_path = None
 
-    # 1. Check environment variable override
+    # 1. Check KNOWLEDGE_TOOL_CONFIG_ROOT override
     if config_root := os.getenv('KNOWLEDGE_TOOL_CONFIG_ROOT'):
         config_path = Path(config_root) / config_filename
+    # 2. Check CLAUDE_PLUGIN_ROOT (when used as plugin)
+    elif claude_plugin_root := os.getenv('CLAUDE_PLUGIN_ROOT'):
+        config_path = Path(claude_plugin_root) / config_filename
+    # 3. Check CLAUDE_PROJECT_ROOT (when used in project)
+    elif claude_project_root := os.getenv('CLAUDE_PROJECT_ROOT'):
+        config_path = Path(claude_project_root) / config_filename
     else:
-        # 2. Look in same directory as this module (apply_json_patch location)
+        # 4. Look in same directory as this module (apply_json_patch location)
         script_dir = Path(__file__).parent.parent
         config_path = script_dir / config_filename
 
     # Load config if exists
-    if config_path.exists():
+    if config_path and config_path.exists():
         try:
             with open(config_path, 'r') as f:
                 config = yaml.safe_load(f) or {}
@@ -131,7 +140,8 @@ def load_config() -> tuple[Dict, Path]:
             print(f"Warning: Failed to load config from {config_path}: {e}", file=sys.stderr)
             return {}, config_path
 
-    return {}, config_path
+    # No config found - return empty config (will use only built-in models)
+    return {}, config_path if config_path else Path("knowledge_config.yaml")
 
 
 def resolve_pluggable_models_dirs(external_models_path: Optional[str] = None) -> List[Path]:

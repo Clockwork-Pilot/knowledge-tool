@@ -2,6 +2,7 @@
 """Tests for Doc model rendering functionality and external model support."""
 
 import json
+import os
 import tempfile
 from pathlib import Path
 import pytest
@@ -80,7 +81,7 @@ class TestRenderWithExternalModels:
         return str(Path(__file__).parent / "test_models")
 
     def test_render_with_external_models(self, test_models_path):
-        """Test rendering a custom Test model using external models."""
+        """Test rendering a custom Test model using external models configured via env var."""
         test_model = TestModel(
             id="test_1",
             title="Test Document",
@@ -95,27 +96,38 @@ class TestRenderWithExternalModels:
             temp_path = f.name
 
         try:
-            # Render with external models
-            result = render(temp_path, external_models_path=test_models_path)
+            # Set environment variable to point to test models
+            old_root = os.environ.get('KNOWLEDGE_TOOL_CONFIG_ROOT')
+            try:
+                os.environ['KNOWLEDGE_TOOL_CONFIG_ROOT'] = str(Path(test_models_path).parent)
 
-            assert result is not None
-            assert "# Test Document" in result
-            assert "A test document" in result
+                # Render with external models configured
+                result = render(temp_path)
 
-            # Verify markdown file was created
-            md_path = Path(temp_path).with_suffix(".md")
-            assert md_path.exists()
+                assert result is not None
+                assert "# Test Document" in result
+                assert "A test document" in result
 
-            md_content = md_path.read_text()
-            assert "# Test Document" in md_content
-            assert "## Metadata" in md_content
-            assert "status" in md_content
+                # Verify markdown file was created
+                md_path = Path(temp_path).with_suffix(".md")
+                assert md_path.exists()
+
+                md_content = md_path.read_text()
+                assert "# Test Document" in md_content
+                assert "## Metadata" in md_content
+                assert "status" in md_content
+            finally:
+                # Restore original environment
+                if old_root is not None:
+                    os.environ['KNOWLEDGE_TOOL_CONFIG_ROOT'] = old_root
+                else:
+                    os.environ.pop('KNOWLEDGE_TOOL_CONFIG_ROOT', None)
         finally:
             Path(temp_path).unlink()
             Path(temp_path).with_suffix(".md").unlink(missing_ok=True)
 
     def test_render_without_external_models_fails_for_unknown_type(self):
-        """Test that rendering unknown model type without external models fails."""
+        """Test that rendering unknown model type without external models configured fails."""
         test_model = TestModel(
             id="test_1",
             title="Test Document"
@@ -128,13 +140,22 @@ class TestRenderWithExternalModels:
             temp_path = f.name
 
         try:
-            # Render without external models should fail (return None)
-            result = render(temp_path, external_models_path=None)
-            assert result is None
+            # Clear environment variable to ensure no external models are configured
+            old_root = os.environ.get('KNOWLEDGE_TOOL_CONFIG_ROOT')
+            try:
+                os.environ.pop('KNOWLEDGE_TOOL_CONFIG_ROOT', None)
 
-            # Markdown file should not be created
-            md_path = Path(temp_path).with_suffix(".md")
-            assert not md_path.exists()
+                # Render without external models should fail (return None)
+                result = render(temp_path)
+                assert result is None
+
+                # Markdown file should not be created
+                md_path = Path(temp_path).with_suffix(".md")
+                assert not md_path.exists()
+            finally:
+                # Restore original environment
+                if old_root is not None:
+                    os.environ['KNOWLEDGE_TOOL_CONFIG_ROOT'] = old_root
         finally:
             Path(temp_path).unlink()
             Path(temp_path).with_suffix(".md").unlink(missing_ok=True)
