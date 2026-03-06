@@ -134,7 +134,7 @@ class Doc(RenderableModel):
         # Add metadata information (skip opts field - non-displayable)
         metadata = node.get("metadata", {})
         if metadata:
-            lines.extend(Doc._render_metadata(metadata))
+            lines.extend(Doc._render_metadata(metadata, metadata_heading_level=level + 1))
             lines.append("")
 
         # Add children as list or recursively (sorted by render_priority)
@@ -209,11 +209,12 @@ class Doc(RenderableModel):
         return sorted(children.items(), key=get_priority)
 
     @staticmethod
-    def _render_metadata(metadata: Dict[str, Any]) -> list:
-        """Render metadata fields as formatted text with anchors for TOC linking.
+    def _render_metadata(metadata: Dict[str, Any], metadata_heading_level: int = 3) -> list:
+        """Render metadata fields as markdown headings with proper nesting for TOC linking.
 
         Args:
             metadata: Metadata dictionary
+            metadata_heading_level: Heading level to use for metadata field titles (default: 3 for h3)
 
         Returns:
             List of formatted lines
@@ -244,17 +245,13 @@ class Doc(RenderableModel):
                 lines.append("")
             first_field = False
 
-            # Generate anchor for this field matching TOC anchor format
-            anchor = key.lower()
-            anchor = anchor.replace(" ", "-").replace("_", "-")
-            anchor = re.sub(r'[^\w-]', '', anchor)
             formatted_key = Doc._format_key(key)
 
-            # Add HTML anchor to enable TOC links
-            lines.append(f"<a name=\"{anchor}\"></a>")
+            # Render metadata field as a markdown heading with proper level
+            heading_marker = "#" * metadata_heading_level
+            lines.append(f"{heading_marker} {formatted_key}")
 
             if isinstance(value, list):
-                lines.append(f"**{formatted_key}:**")
                 # Check if list items already start with number pattern (1., 2., etc.)
                 is_ordered = all(
                     isinstance(item, str) and re.match(r"^\d+\.\s", item)
@@ -268,11 +265,10 @@ class Doc(RenderableModel):
                         # Bullet list
                         lines.append(f"  - {item}")
             elif isinstance(value, dict):
-                lines.append(f"**{formatted_key}:**")
                 for sub_key, sub_value in value.items():
                     lines.append(f"  - {Doc._format_key(sub_key)}: {sub_value}")
             elif value:
-                lines.append(f"**{formatted_key}:** {value}")
+                lines.append(str(value))
 
         return lines
 
