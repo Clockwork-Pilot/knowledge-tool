@@ -351,8 +351,8 @@ class TestTaskRender:
         # Plan's children TOC should NOT be included
         assert "  - [Section 1]" not in rendered
 
-    def test_task_render_with_iteration_summary_toc(self):
-        """Test Task TOC includes iteration summary TOC when summary.opts.render_toc is enabled."""
+    def test_task_render_with_iteration_children_toc(self):
+        """Test Task TOC includes iteration children TOC when children have render_toc enabled."""
         from models import Task, Iteration, Opts
 
         plan = Doc(
@@ -361,23 +361,16 @@ class TestTaskRender:
             description="Task plan"
         )
 
-        summary_child = Doc(
-            id="summary_section",
-            label="Summary Section",
-            description="Summary content"
-        )
-
-        summary_doc = Doc(
-            id="summary",
-            label="Summary",
-            description="Iteration summary",
-            children={"section": summary_child},
+        child_section = Doc(
+            id="section1",
+            label="Section 1",
+            description="Child section content",
             opts=Opts(render_toc=True)
         )
 
         iteration1 = Iteration(
             id="iteration_1",
-            summary=summary_doc
+            children={"section1": child_section}
         )
 
         task = Task(
@@ -392,8 +385,8 @@ class TestTaskRender:
         assert "## Table of Contents" in rendered
         assert "- [Iterations](#iterations)" in rendered
         assert "  - [iteration_1](#iteration_1)" in rendered
-        # Summary's children TOC should be indented under iteration
-        assert "    - [Summary Section](#summary-section)" in rendered
+        # Child's TOC should be indented under iteration
+        assert "    - [Section 1](#section-1)" in rendered
 
 
 if __name__ == "__main__":

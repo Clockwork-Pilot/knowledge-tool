@@ -164,8 +164,8 @@ class Task(RenderableModel):
         lines.append("")
 
         # Insert TOC if applicable
-        if include_toc:
-            toc_lines = self.render_toc()
+        if include_toc and self.opts and self.opts.render_toc:
+            toc_lines = self._generate_toc()
             if toc_lines:
                 lines.append("## Table of Contents")
                 lines.append("")
@@ -191,8 +191,7 @@ class Task(RenderableModel):
                 lines.append(iteration.render(include_toc=False))
                 lines.append("")
 
-        markdown_content = "\n".join(lines).strip()
-        return markdown_content
+        return "\n".join(lines).strip()
 
     def _generate_toc(self) -> list:
         """Generate table of contents for the task.
@@ -223,12 +222,12 @@ class Task(RenderableModel):
             )
 
             for iter_id, iteration in sorted_iterations:
-                # Generate anchor for iteration ID
-                anchor = iter_id.lower()
-                anchor = anchor.replace(' ', '-')
-                anchor = re.sub(r'[^\w-]', '', anchor)
+                # Use iteration's id field for heading and anchor
+                iter_id_field = iteration.id
+                # Generate anchor matching standard markdown: lowercase, spaces→hyphens
+                anchor = iter_id_field.lower().replace(' ', '-')
 
-                toc_lines.append(f"  - [{iter_id}](#{anchor})")
+                toc_lines.append(f"  - [{iter_id_field}](#{anchor})")
 
                 # Add iteration's children TOC if available
                 iteration_toc = iteration.render_toc()
@@ -240,18 +239,26 @@ class Task(RenderableModel):
 
     @staticmethod
     def _generate_doc_toc(doc: Doc, level: int = 1) -> list:
-        """Generate table of contents from a Doc node and its children.
+        """Generate table of contents from a Doc node including its label and children.
 
         Args:
             doc: Doc node to generate TOC for
             level: Current heading level (for indentation)
 
         Returns:
-            List of TOC lines
+            List of TOC lines with doc label and its children
         """
         import re
         toc_lines = []
 
+        # Add the doc's own label as a TOC entry
+        label = doc.label
+        anchor = label.lower()
+        anchor = anchor.replace(' ', '-')
+        anchor = re.sub(r'[^\w-]', '', anchor)
+        toc_lines.append(f"- [{label}](#{anchor})")
+
+        # Add doc's children if they exist
         children = doc.children or {}
         if children:
             # Sort children by priority (matching Doc's sorting logic)
@@ -261,18 +268,18 @@ class Task(RenderableModel):
             )
 
             for child_id, child_node in sorted_children:
-                label = child_node.label
+                child_label = child_node.label
                 # Generate anchor matching standard markdown: lowercase, spaces→hyphens, remove special chars
-                anchor = label.lower()
-                anchor = anchor.replace(' ', '-')
-                anchor = re.sub(r'[^\w-]', '', anchor)
+                child_anchor = child_label.lower()
+                child_anchor = child_anchor.replace(' ', '-')
+                child_anchor = re.sub(r'[^\w-]', '', child_anchor)
 
-                toc_lines.append(f"- [{label}](#{anchor})")
+                toc_lines.append(f"  - [{child_label}](#{child_anchor})")
 
                 # Recursively add child's children
                 child_toc = Task._generate_doc_toc(child_node, level + 1)
                 for toc_line in child_toc:
-                    toc_lines.append("  " + toc_line)
+                    toc_lines.append("    " + toc_line)
 
         return toc_lines
 
