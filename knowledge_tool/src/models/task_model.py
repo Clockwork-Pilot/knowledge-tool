@@ -312,7 +312,9 @@ class Task(RenderableModel):
                 self.iterations.items(), key=lambda x: (len(x[0]), x[0])
             )
 
-            for iter_id, iteration in sorted_iterations:
+            for iter_key, iteration in sorted_iterations:
+                # Use iteration's id field (not dict key) for heading and anchor
+                iter_id = iteration.id
                 # Create anchor for iteration (lowercase, spaces/underscores to hyphens)
                 anchor = iter_id.lower().replace("_", "-")
                 toc_lines.append(f"  - [{iter_id}](#{anchor})")

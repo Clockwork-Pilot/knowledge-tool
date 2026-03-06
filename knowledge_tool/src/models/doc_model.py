@@ -210,7 +210,7 @@ class Doc(RenderableModel):
 
     @staticmethod
     def _render_metadata(metadata: Dict[str, Any]) -> list:
-        """Render metadata fields as formatted text.
+        """Render metadata fields as formatted text with anchors for TOC linking.
 
         Args:
             metadata: Metadata dictionary
@@ -244,8 +244,17 @@ class Doc(RenderableModel):
                 lines.append("")
             first_field = False
 
+            # Generate anchor for this field matching TOC anchor format
+            anchor = key.lower()
+            anchor = anchor.replace(" ", "-").replace("_", "-")
+            anchor = re.sub(r'[^\w-]', '', anchor)
+            formatted_key = Doc._format_key(key)
+
+            # Add HTML anchor to enable TOC links
+            lines.append(f"<a name=\"{anchor}\"></a>")
+
             if isinstance(value, list):
-                lines.append(f"**{Doc._format_key(key)}:**")
+                lines.append(f"**{formatted_key}:**")
                 # Check if list items already start with number pattern (1., 2., etc.)
                 is_ordered = all(
                     isinstance(item, str) and re.match(r"^\d+\.\s", item)
@@ -259,11 +268,11 @@ class Doc(RenderableModel):
                         # Bullet list
                         lines.append(f"  - {item}")
             elif isinstance(value, dict):
-                lines.append(f"**{Doc._format_key(key)}:**")
+                lines.append(f"**{formatted_key}:**")
                 for sub_key, sub_value in value.items():
                     lines.append(f"  - {Doc._format_key(sub_key)}: {sub_value}")
             elif value:
-                lines.append(f"**{Doc._format_key(key)}:** {value}")
+                lines.append(f"**{formatted_key}:** {value}")
 
         return lines
 
