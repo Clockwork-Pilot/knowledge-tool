@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Test model for pluggable models."""
+"""Test-only models for knowledge_tool testing.
+
+This module contains custom model implementations used only for testing
+the pluggable model system. These models should NOT be mixed with the
+main knowledge_tool models (Doc, Task, etc.) in production.
+
+The models here are registered via conftest.py for test purposes only.
+"""
 
 from typing import Literal, Optional, Dict, Any
 from pydantic import Field

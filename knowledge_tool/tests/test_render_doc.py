@@ -3,13 +3,19 @@
 
 import json
 import os
+import sys
 import tempfile
 from pathlib import Path
 import pytest
 
 from knowledge_tool.models import Doc
 from knowledge_tool.common.render import render
-from knowledge_tool.test_models.models import TestModel
+
+# Import TestModel directly from test_models.models
+test_models_dir = Path(__file__).parent / "test_models"
+if str(test_models_dir) not in sys.path:
+    sys.path.insert(0, str(test_models_dir))
+from models import TestModel
 
 
 class TestDocRender:
