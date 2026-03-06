@@ -7,9 +7,9 @@ from pydantic import BaseModel, Field
 
 # Support both package imports (.) and direct imports (models)
 try:
-    from . import RenderableModel, Doc
+    from . import RenderableModel, Doc, Opts
 except ImportError:
-    from models import RenderableModel, Doc
+    from models import RenderableModel, Doc, Opts
 
 
 class CodeStats(BaseModel):
@@ -109,6 +109,7 @@ class Task(RenderableModel):
     iterations: Optional[Dict[str, Iteration]] = Field(
         None, description="Iterations indexed by iteration ID"
     )
+    opts: Optional[Opts] = Field(None, description="Task rendering options (render_toc, render_priority)")
 
     def render(self) -> str:
         """Render Task to markdown string.
@@ -119,6 +120,9 @@ class Task(RenderableModel):
         lines = []
         lines.append(f"# Task: {self.id}")
         lines.append("")
+
+        # Check if TOC should be rendered
+        render_toc = self.opts and self.opts.render_toc
 
         # Render plan section
         lines.append("## Plan")
@@ -139,7 +143,113 @@ class Task(RenderableModel):
                 lines.append(iteration.render())
                 lines.append("")
 
-        return "\n".join(lines).strip()
+        markdown_content = "\n".join(lines).strip()
+
+        # Insert TOC if enabled
+        if render_toc:
+            toc_lines = self._generate_toc()
+            if toc_lines:
+                # Find where to insert TOC (after heading and any description)
+                lines_list = markdown_content.split("\n")
+                toc_insert_pos = 1
+                for i, line in enumerate(lines_list[1:], 1):
+                    if line.startswith("#") or line == "":
+                        continue
+                    toc_insert_pos = i
+                    break
+
+                lines_list.insert(toc_insert_pos, "")
+                lines_list.insert(toc_insert_pos + 1, "## Table of Contents")
+                lines_list.insert(toc_insert_pos + 2, "")
+                lines_list[toc_insert_pos + 3:toc_insert_pos + 3] = toc_lines
+                lines_list.insert(toc_insert_pos + 3 + len(toc_lines), "")
+
+                markdown_content = "\n".join(lines_list)
+
+        return markdown_content.strip()
+
+    def _generate_toc(self) -> list:
+        """Generate table of contents for the task.
+
+        Returns:
+            List of TOC lines including Plan and Iterations sections.
+        """
+        import re
+        toc_lines = []
+
+        # Add Plan section
+        toc_lines.append("- [Plan](#plan)")
+
+        # Generate TOC for Plan if the Doc has render_toc enabled
+        if self.plan.opts and self.plan.opts.render_toc:
+            plan_toc = self._generate_doc_toc(self.plan)
+            # Indent plan's TOC under Plan
+            for toc_line in plan_toc:
+                toc_lines.append("  " + toc_line)
+
+        # Add Iterations section if there are iterations
+        if self.iterations:
+            toc_lines.append("- [Iterations](#iterations)")
+
+            # Sort iterations by ID
+            sorted_iterations = sorted(
+                self.iterations.items(), key=lambda x: (len(x[0]), x[0])
+            )
+
+            for iter_id, iteration in sorted_iterations:
+                # Generate anchor for iteration ID
+                anchor = iter_id.lower()
+                anchor = anchor.replace(' ', '-')
+                anchor = re.sub(r'[^\w-]', '', anchor)
+
+                toc_lines.append(f"  - [{iter_id}](#{anchor})")
+
+                # Add summary TOC if summary exists and has render_toc enabled
+                if iteration.summary and iteration.summary.opts and iteration.summary.opts.render_toc:
+                    summary_toc = self._generate_doc_toc(iteration.summary)
+                    # Indent summary's TOC under the iteration
+                    for toc_line in summary_toc:
+                        toc_lines.append("    " + toc_line)
+
+        return toc_lines
+
+    @staticmethod
+    def _generate_doc_toc(doc: Doc, level: int = 1) -> list:
+        """Generate table of contents from a Doc node and its children.
+
+        Args:
+            doc: Doc node to generate TOC for
+            level: Current heading level (for indentation)
+
+        Returns:
+            List of TOC lines
+        """
+        import re
+        toc_lines = []
+
+        children = doc.children or {}
+        if children:
+            # Sort children by priority (matching Doc's sorting logic)
+            sorted_children = sorted(
+                children.items(),
+                key=lambda item: not item[1].opts.render_priority if item[1].opts else True
+            )
+
+            for child_id, child_node in sorted_children:
+                label = child_node.label
+                # Generate anchor matching standard markdown: lowercase, spaces→hyphens, remove special chars
+                anchor = label.lower()
+                anchor = anchor.replace(' ', '-')
+                anchor = re.sub(r'[^\w-]', '', anchor)
+
+                toc_lines.append(f"- [{label}](#{anchor})")
+
+                # Recursively add child's children
+                child_toc = Task._generate_doc_toc(child_node, level + 1)
+                for toc_line in child_toc:
+                    toc_lines.append("  " + toc_line)
+
+        return toc_lines
 
 
 Task.model_rebuild()
