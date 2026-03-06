@@ -15,8 +15,12 @@ class RenderableModel(BaseModel, ABC):
     type: str  # Subclasses override with Literal["ModelType"]
 
     @abstractmethod
-    def render(self) -> str:
+    def render(self, include_toc: bool = True) -> str:
         """Render model to markdown string.
+
+        Args:
+            include_toc: Whether to include TOC in rendering (default: True).
+                        Set to False when rendering as a child of another document.
 
         Returns:
             Formatted markdown string representation of the model.

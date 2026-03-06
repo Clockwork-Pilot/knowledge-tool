@@ -49,8 +49,12 @@ class Iteration(RenderableModel):
         None, description="Coverage metrics per test (test_name -> lines_covered)"
     )
 
-    def render(self) -> str:
+    def render(self, include_toc: bool = True) -> str:
         """Render Iteration to markdown string.
+
+        Args:
+            include_toc: Whether to include TOC in rendering (default: True).
+                        Set to False when rendering as a child of another document.
 
         Returns:
             Formatted markdown string representation.
@@ -59,9 +63,9 @@ class Iteration(RenderableModel):
         lines.append(f"### {self.id}")
         lines.append("")
 
-        # Render summary
+        # Render summary (without its own TOC, since parent Task has comprehensive TOC)
         if self.summary:
-            summary_markdown = self.summary.render()
+            summary_markdown = self.summary.render(include_toc=False)
             lines.append(summary_markdown)
             lines.append("")
 
@@ -110,8 +114,11 @@ class Iteration(RenderableModel):
         if not self.summary:
             return []
 
-        # Only include summary's TOC if it has render_toc=true
-        return self.summary.render_toc()
+        # Only include summary's TOC if it explicitly has render_toc=true
+        if self.summary.opts and self.summary.opts.render_toc:
+            return self.summary.render_toc()
+
+        return []
 
 
 class Task(RenderableModel):
@@ -125,8 +132,12 @@ class Task(RenderableModel):
     )
     opts: Optional[Opts] = Field(None, description="Task rendering options (render_toc, render_priority)")
 
-    def render(self) -> str:
+    def render(self, include_toc: bool = True) -> str:
         """Render Task to markdown string.
+
+        Args:
+            include_toc: Whether to include TOC in rendering (default: True).
+                        Set to False when rendering as a child of another document.
 
         Returns:
             Formatted markdown string representation.
@@ -136,17 +147,18 @@ class Task(RenderableModel):
         lines.append("")
 
         # Insert TOC if applicable
-        toc_lines = self.render_toc()
-        if toc_lines:
-            lines.append("## Table of Contents")
-            lines.append("")
-            lines.extend(toc_lines)
-            lines.append("")
+        if include_toc:
+            toc_lines = self.render_toc()
+            if toc_lines:
+                lines.append("## Table of Contents")
+                lines.append("")
+                lines.extend(toc_lines)
+                lines.append("")
 
-        # Render plan section
+        # Render plan section (without its own TOC, since Task has comprehensive TOC)
         lines.append("## Plan")
         lines.append("")
-        plan_markdown = self.plan.render()
+        plan_markdown = self.plan.render(include_toc=False)
         lines.append(plan_markdown)
         lines.append("")
 
@@ -159,7 +171,7 @@ class Task(RenderableModel):
                 self.iterations.items(), key=lambda x: (len(x[0]), x[0])
             )
             for iter_id, iteration in sorted_iterations:
-                lines.append(iteration.render())
+                lines.append(iteration.render(include_toc=False))
                 lines.append("")
 
         markdown_content = "\n".join(lines).strip()
@@ -274,8 +286,8 @@ class Task(RenderableModel):
         """Generate TOC for Task structure with Plan and Iterations sections.
 
         Includes:
-        - Plan entry with nested TOC from plan.render_toc() if plan has render_toc=true
-        - Iterations entry with iteration entries and their nested TOCs
+        - Plan entry with nested TOC from plan.render_toc() if plan.opts.render_toc=true
+        - Iterations entry with iteration entries and their nested TOCs if summary.opts.render_toc=true
 
         Returns:
             List of TOC lines with proper indentation and anchors.
@@ -284,7 +296,7 @@ class Task(RenderableModel):
 
         # Plan entry
         toc_lines.append("- [Plan](#plan)")
-        if self.plan:
+        if self.plan and self.plan.opts and self.plan.opts.render_toc:
             plan_toc = self.plan.render_toc()
             if plan_toc:
                 # Indent plan's TOC entries
@@ -305,11 +317,12 @@ class Task(RenderableModel):
                 anchor = iter_id.lower().replace("_", "-")
                 toc_lines.append(f"  - [{iter_id}](#{anchor})")
 
-                # Add nested TOC from iteration if it has a summary with render_toc=true
-                iteration_toc = iteration.render_toc()
-                if iteration_toc:
-                    for line in iteration_toc:
-                        toc_lines.append("    " + line)
+                # Add nested TOC from iteration's summary only if summary has render_toc=true
+                if iteration.summary and iteration.summary.opts and iteration.summary.opts.render_toc:
+                    iteration_toc = iteration.render_toc()
+                    if iteration_toc:
+                        for line in iteration_toc:
+                            toc_lines.append("    " + line)
 
         return toc_lines
 

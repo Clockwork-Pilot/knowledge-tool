@@ -28,8 +28,12 @@ class Doc(RenderableModel):
     opts: Optional[Opts] = None
     children: Optional[Dict[str, "Doc"]] = None
 
-    def render(self) -> str:
+    def render(self, include_toc: bool = True) -> str:
         """Render Doc to markdown string.
+
+        Args:
+            include_toc: Whether to include TOC in rendering (default: True).
+                        Set to False when rendering as a child of another document.
 
         Returns:
             Formatted markdown string representation.
@@ -38,9 +42,9 @@ class Doc(RenderableModel):
         lines = []
         self._render_node(doc_dict, lines, level=1)
 
-        # Insert TOC if enabled in opts
+        # Insert TOC if enabled in opts and include_toc is True
         opts = doc_dict.get("opts", {})
-        if opts.get("render_toc", False):
+        if include_toc and opts.get("render_toc", False):
             toc_lines = self.render_toc()
             if toc_lines:
                 # Find where to insert TOC (after heading and description)
@@ -62,13 +66,50 @@ class Doc(RenderableModel):
         return markdown_content
 
     def render_toc(self) -> list:
-        """Generate TOC for this Doc's children structure.
+        """Generate TOC for this Doc including metadata fields and children.
+
+        Generates entries for:
+        - Metadata field keys (rendered as sections)
+        - Child nodes (rendered as nested headings)
 
         Returns:
             List of TOC lines with proper indentation and anchors.
         """
         doc_dict = json.loads(self.model_dump_json(exclude_none=True))
-        return self._generate_toc(doc_dict)
+        toc_lines = []
+
+        # Add TOC entries for metadata fields
+        metadata = doc_dict.get("metadata", {})
+        if metadata:
+            for key in metadata.keys():
+                # Format anchor: lowercase, spaces/underscores to hyphens, remove special chars
+                anchor = key.lower()
+                anchor = anchor.replace(" ", "-").replace("_", "-")
+                anchor = re.sub(r'[^\w-]', '', anchor)
+
+                formatted_key = Doc._format_key(key)
+                toc_lines.append(f"- [{formatted_key}](#{anchor})")
+
+        # Add TOC entries for children
+        children = doc_dict.get("children", {})
+        if children:
+            sorted_children = Doc._sort_children_by_priority(children)
+            for child_id, child_node in sorted_children:
+                label = child_node.get("label", child_id)
+                # Generate anchor matching standard markdown
+                anchor = label.lower()
+                anchor = anchor.replace(' ', '-')
+                anchor = re.sub(r'[^\w-]', '', anchor)
+
+                toc_lines.append(f"- [{label}](#{anchor})")
+
+                # Recursively add child's TOC (its metadata and children)
+                child_toc = Doc._generate_toc(child_node, level=2)
+                if child_toc:
+                    for line in child_toc:
+                        toc_lines.append("  " + line)
+
+        return toc_lines
 
     @staticmethod
     def _render_node(node: Dict[str, Any], lines: list, level: int = 1) -> None:
