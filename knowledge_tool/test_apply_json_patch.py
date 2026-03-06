@@ -269,10 +269,9 @@ class TestDocumentNotFound:
     """Test handling of non-existent documents."""
 
     def test_document_not_found(self):
-        """Test operation on non-existent file."""
-        patch = json.dumps([{"op": "add", "path": "/test", "value": "test"}])
-
-        error = apply_json_patch("/nonexistent/path/document.json", patch)
+        """Test re-render operation on non-existent file."""
+        # Re-render without patch should fail with "not found" error
+        error = apply_json_patch("/nonexistent/path/document.json", None)
 
         assert error is not None
         assert "not found" in error.error.lower()

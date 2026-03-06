@@ -1,0 +1,3 @@
+# Test configuration for external models
+pluggable_models_dirs:
+  - ./test_models
