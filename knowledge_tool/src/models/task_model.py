@@ -39,7 +39,7 @@ class Iteration(RenderableModel):
 
     id: str = Field(..., description="Unique iteration identifier")
     type: Literal["Iteration"] = "Iteration"
-    summary: Optional[Doc] = Field(None, description="Summary of the iteration")
+    children: Optional[Dict[str, Doc]] = Field(None, description="Child documents for iteration sections")
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Iteration metadata (created_at, updated_at, etc.)"
     )
@@ -63,11 +63,17 @@ class Iteration(RenderableModel):
         lines.append(f"### {self.id}")
         lines.append("")
 
-        # Render summary (without its own TOC, since parent Task has comprehensive TOC)
-        if self.summary:
-            summary_markdown = self.summary.render(include_toc=False)
-            lines.append(summary_markdown)
-            lines.append("")
+        # Render children documents (without their own TOC, since parent Task has comprehensive TOC)
+        if self.children:
+            # Sort children by render_priority (if available)
+            sorted_children = sorted(
+                self.children.items(),
+                key=lambda x: (not x[1].opts.render_priority if x[1].opts else True)
+            )
+            for child_id, child_doc in sorted_children:
+                child_markdown = child_doc.render(include_toc=False)
+                lines.append(child_markdown)
+                lines.append("")
 
         # Render metadata
         if self.metadata:
@@ -104,21 +110,32 @@ class Iteration(RenderableModel):
         return "\n".join(lines).strip()
 
     def render_toc(self) -> list:
-        """Generate TOC for Iteration's summary structure.
+        """Generate TOC for Iteration's children structure.
 
-        Returns nested TOC from summary.render_toc() if summary Doc has render_toc=true.
+        Returns nested TOC from each child if it has render_toc=true.
 
         Returns:
-            List of TOC lines from summary (empty if no summary or render_toc not enabled).
+            List of TOC lines from children with render_toc enabled.
         """
-        if not self.summary:
-            return []
+        toc_lines = []
 
-        # Only include summary's TOC if it explicitly has render_toc=true
-        if self.summary.opts and self.summary.opts.render_toc:
-            return self.summary.render_toc()
+        if not self.children:
+            return toc_lines
 
-        return []
+        # Sort children by render_priority (if available)
+        sorted_children = sorted(
+            self.children.items(),
+            key=lambda x: (not x[1].opts.render_priority if x[1].opts else True)
+        )
+
+        for child_id, child_doc in sorted_children:
+            # Only include child's TOC if it explicitly has render_toc=true
+            if child_doc.opts and child_doc.opts.render_toc:
+                child_toc = child_doc.render_toc()
+                if child_toc:
+                    toc_lines.extend(child_toc)
+
+        return toc_lines
 
 
 class Task(RenderableModel):
@@ -319,12 +336,11 @@ class Task(RenderableModel):
                 anchor = iter_id.lower().replace(" ", "-")
                 toc_lines.append(f"  - [{iter_id}](#{anchor})")
 
-                # Add nested TOC from iteration's summary only if summary has render_toc=true
-                if iteration.summary and iteration.summary.opts and iteration.summary.opts.render_toc:
-                    iteration_toc = iteration.render_toc()
-                    if iteration_toc:
-                        for line in iteration_toc:
-                            toc_lines.append("    " + line)
+                # Add nested TOC from iteration's children if any have render_toc=true
+                iteration_toc = iteration.render_toc()
+                if iteration_toc:
+                    for line in iteration_toc:
+                        toc_lines.append("    " + line)
 
         return toc_lines
 

@@ -173,13 +173,13 @@ class TestRenderWithExternalModels:
 
 
 class TestIterationRender:
-    """Test Iteration model render() method with summary field."""
+    """Test Iteration model render() method with children."""
 
-    def test_iteration_render_with_summary(self):
-        """Test rendering an Iteration with summary field."""
+    def test_iteration_render_with_children(self):
+        """Test rendering an Iteration with child documents."""
         from models import Iteration
 
-        summary_doc = Doc(
+        child_doc = Doc(
             id="summary",
             label="Summary",
             description="Fixed authentication bug and improved performance"
@@ -187,7 +187,7 @@ class TestIterationRender:
 
         iteration = Iteration(
             id="iteration_1",
-            summary=summary_doc
+            children={"summary": child_doc}
         )
 
         rendered = iteration.render()
@@ -195,8 +195,8 @@ class TestIterationRender:
         assert "### iteration_1" in rendered
         assert "Fixed authentication bug and improved performance" in rendered
 
-    def test_iteration_render_without_summary(self):
-        """Test rendering an Iteration without summary field."""
+    def test_iteration_render_without_children(self):
+        """Test rendering an Iteration without children."""
         from models import Iteration
 
         iteration = Iteration(id="iteration_1")
@@ -204,7 +204,7 @@ class TestIterationRender:
         rendered = iteration.render()
 
         assert "### iteration_1" in rendered
-        # Summary section should not appear if summary is None
+        # No children should render cleanly
         assert "None" not in rendered
 
 
