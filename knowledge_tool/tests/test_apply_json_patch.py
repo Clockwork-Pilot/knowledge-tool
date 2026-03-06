@@ -2,11 +2,12 @@
 """Tests for knowledge_tools API - apply_json_patch function."""
 
 import json
+import sys
 import tempfile
 from pathlib import Path
 import pytest
 
-from knowledge_tool.apply_json_patch import apply_json_patch
+from apply_json_patch import apply_json_patch
 from knowledge_tool.common.response import ApplyPatchErrorResponse
 
 

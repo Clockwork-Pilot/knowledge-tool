@@ -3,11 +3,12 @@
 
 import json
 import os
+import sys
 import tempfile
 from pathlib import Path
 import pytest
 
-from knowledge_tool.apply_json_patch import apply_json_patch
+from apply_json_patch import apply_json_patch
 
 
 @pytest.fixture

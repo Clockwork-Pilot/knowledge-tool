@@ -16,7 +16,8 @@ dev = ["pytest>=7.0"]
 apply-json-patch = "knowledge_tool.apply_json_patch:main"
 
 [tool.pytest.ini_options]
-testpaths = ["knowledge_tool"]
+pythonpath = ["src"]
+testpaths = ["knowledge_tool/tests"]
 python_files = ["test_*.py"]
 norecursedirs = ["test_models"]
 asyncio_default_fixture_loop_scope = "function"

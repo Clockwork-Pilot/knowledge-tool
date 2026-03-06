@@ -10,8 +10,11 @@ import importlib.util
 
 # Add src as a top-level module named knowledge_tool
 src_dir = Path(__file__).parent.parent / "src"
+knowledge_tool_dir = src_dir.parent
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
+if str(knowledge_tool_dir) not in sys.path:
+    sys.path.insert(0, str(knowledge_tool_dir))
 
 # Create a knowledge_tool module alias that points to src
 spec = importlib.util.spec_from_file_location(
