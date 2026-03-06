@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 import pytest
 
-from knowledge_tool.knowledge_files_registry import (
+from knowledge_files_registry import (
     add_knowledge_file,
     add_knowledge_files,
     is_knowledge_file,
@@ -20,7 +20,7 @@ def temp_registry(monkeypatch):
         temp_path = f.name
 
     monkeypatch.setattr(
-        "knowledge_tool.knowledge_files_registry.get_registry_path",
+        "knowledge_files_registry.get_registry_path",
         lambda: Path(temp_path),
     )
 

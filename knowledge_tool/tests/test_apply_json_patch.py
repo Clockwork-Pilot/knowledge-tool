@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from apply_json_patch import apply_json_patch
-from knowledge_tool.common.response import ApplyPatchErrorResponse
+from common.response import ApplyPatchErrorResponse
 
 
 @pytest.fixture

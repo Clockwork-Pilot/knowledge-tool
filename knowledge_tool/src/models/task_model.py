@@ -5,7 +5,11 @@ import json
 from typing import Any, Dict, Optional, Literal
 from pydantic import BaseModel, Field
 
-from src.models import RenderableModel, Doc
+# Support both package imports (.) and direct imports (models)
+try:
+    from . import RenderableModel, Doc
+except ImportError:
+    from models import RenderableModel, Doc
 
 
 class CodeStats(BaseModel):

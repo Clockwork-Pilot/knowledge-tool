@@ -10,7 +10,7 @@ The models here are registered via conftest.py for test purposes only.
 
 from typing import Literal, Optional, Dict, Any
 from pydantic import Field
-from knowledge_tool.models import RenderableModel
+from models import RenderableModel
 
 
 class TestModel(RenderableModel):

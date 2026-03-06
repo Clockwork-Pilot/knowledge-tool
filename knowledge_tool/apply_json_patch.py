@@ -9,17 +9,19 @@ from typing import Any, Dict, List, Optional
 from jsonpatch import JsonPatch, JsonPatchException
 from pydantic import ValidationError
 
-# Add knowledge_tool parent directory to path to support direct execution without installation
+# Support direct execution: add src to path so modules can be imported
 _script_dir = Path(__file__).parent
-if str(_script_dir) not in sys.path:
-    sys.path.insert(0, str(_script_dir))
+_src_dir = _script_dir / "src"
+if str(_src_dir) not in sys.path:
+    sys.path.insert(0, str(_src_dir))
 
-from src.models import Doc
-from src.common.response import ApplyPatchErrorResponse
-from src.common.file_tools import write_protected_file
-from src.common.render import render
-from src.common.model_loader import get_model_registry
-from src.knowledge_files_registry import add_knowledge_files
+# Import directly from src modules
+from models import Doc
+from common.response import ApplyPatchErrorResponse
+from common.file_tools import write_protected_file
+from common.render import render
+from common.model_loader import get_model_registry
+from knowledge_files_registry import add_knowledge_files
 
 
 def apply_json_patch(

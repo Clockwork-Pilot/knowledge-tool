@@ -31,6 +31,11 @@
   - [File Protection Purpose](#file-protection-purpose)
 - [Testing](#testing)
 - [Installation Note](#installation-note)
+- [Python API Usage](#python-api-usage)
+  - [Function Signature](#function-signature)
+  - [Usage Examples](#usage-examples)
+  - [Using from Other Projects](#using-from-other-projects)
+  - [Error Handling](#error-handling)
 
 Updated description
 
@@ -359,3 +364,55 @@ Do NOT install this package. Use the scripts directly without installation. The 
 **Importance:** critical
 
 **Applies To:** all scripts
+
+## Python API Usage
+The apply_json_patch function is a clean, simple callable that can be used directly from Python code without any installation. It works in any project by simply importing and calling the function.
+
+**Stability:** stable
+
+**Breaking Changes:** none
+
+### Function Signature
+apply_json_patch(document_path: str, json_patch: Optional[str] = None) -> Optional[ApplyPatchErrorResponse]
+
+Simple two-parameter function:
+- document_path: String path to JSON file (can be relative or absolute)
+- json_patch: JSON Patch operations string (RFC 6902), or None to just re-render
+
+Returns None on success, or ApplyPatchErrorResponse with error details on failure.
+
+### Usage Examples
+# Create or patch a document
+from apply_json_patch import apply_json_patch
+
+# Patch existing document
+error = apply_json_patch('doc.json', '[{"op": "replace", "path": "/label", "value": "new"}]')
+if error:
+    print(f"Error: {error.error}")
+else:
+    print("Success")
+
+# Create new document by providing patch for non-existent file
+error = apply_json_patch('new_doc.json', '[{"op": "add", "path": "/id", "value": "doc1"}]')
+
+# Re-render existing document without patching
+error = apply_json_patch('doc.json', None)
+
+### Using from Other Projects
+To use apply_json_patch from another project:
+
+1. Copy the apply_json_patch.py file to your project
+2. Ensure jsonpatch and pydantic are installed: pip install jsonpatch pydantic
+3. Import and use: from apply_json_patch import apply_json_patch
+
+The function is self-contained and works without any installation or sys.path manipulation on the caller side. The script handles its own internal path setup automatically.
+
+### Error Handling
+The function returns None on success, or an ApplyPatchErrorResponse object on error. Check the response to get detailed error information:
+
+if result := apply_json_patch(path, patch):
+    print(result.error)
+    if result.hint:
+        print(result.hint)
+    if result.details:
+        print(result.details)

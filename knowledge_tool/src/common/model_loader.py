@@ -7,7 +7,12 @@ import yaml
 import importlib.util
 from pathlib import Path
 from typing import Dict, Optional, Type, List
-from src.models import MODEL_REGISTRY, RenderableModel
+
+# Support both package imports (from ..) and direct imports (models)
+try:
+    from ..models import MODEL_REGISTRY, RenderableModel
+except ImportError:
+    from models import MODEL_REGISTRY, RenderableModel
 
 
 def load_external_models(external_models_path: str) -> Dict[str, Type[RenderableModel]]:

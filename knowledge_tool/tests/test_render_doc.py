@@ -8,14 +8,19 @@ import tempfile
 from pathlib import Path
 import pytest
 
-from knowledge_tool.models import Doc
-from knowledge_tool.common.render import render
+# pytest adds src to pythonpath via pyproject.toml
+# conftest.py also adds test_models to pythonpath
+from models import Doc
+from common.render import render
 
-# Import TestModel directly from test_models.models
-test_models_dir = Path(__file__).parent / "test_models"
-if str(test_models_dir) not in sys.path:
-    sys.path.insert(0, str(test_models_dir))
-from models import TestModel
+# TestModel is loaded by conftest.py and available as a direct import
+# (conftest adds test_models dir to sys.path, and test_models/models.py is handled)
+test_models_module_path = Path(__file__).parent / "test_models" / "models.py"
+import importlib.util
+spec = importlib.util.spec_from_file_location("test_models_module", str(test_models_module_path))
+test_models_module_loaded = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(test_models_module_loaded)
+TestModel = test_models_module_loaded.TestModel
 
 
 class TestDocRender:

@@ -408,6 +408,46 @@
         "importance": "critical",
         "applies_to": "all scripts"
       }
+    },
+    "callable_api": {
+      "type": "Doc",
+      "id": "callable_api",
+      "label": "Python API Usage",
+      "description": "The apply_json_patch function is a clean, simple callable that can be used directly from Python code without any installation. It works in any project by simply importing and calling the function.",
+      "metadata": {
+        "stability": "stable",
+        "breaking_changes": "none"
+      },
+      "children": {
+        "function_signature": {
+          "type": "Doc",
+          "id": "function_signature",
+          "label": "Function Signature",
+          "description": "apply_json_patch(document_path: str, json_patch: Optional[str] = None) -> Optional[ApplyPatchErrorResponse]\n\nSimple two-parameter function:\n- document_path: String path to JSON file (can be relative or absolute)\n- json_patch: JSON Patch operations string (RFC 6902), or None to just re-render\n\nReturns None on success, or ApplyPatchErrorResponse with error details on failure.",
+          "metadata": {}
+        },
+        "usage_examples": {
+          "type": "Doc",
+          "id": "usage_examples",
+          "label": "Usage Examples",
+          "description": "# Create or patch a document\nfrom apply_json_patch import apply_json_patch\n\n# Patch existing document\nerror = apply_json_patch('doc.json', '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"new\"}]')\nif error:\n    print(f\"Error: {error.error}\")\nelse:\n    print(\"Success\")\n\n# Create new document by providing patch for non-existent file\nerror = apply_json_patch('new_doc.json', '[{\"op\": \"add\", \"path\": \"/id\", \"value\": \"doc1\"}]')\n\n# Re-render existing document without patching\nerror = apply_json_patch('doc.json', None)",
+          "metadata": {}
+        },
+        "from_other_projects": {
+          "type": "Doc",
+          "id": "from_other_projects",
+          "label": "Using from Other Projects",
+          "description": "To use apply_json_patch from another project:\n\n1. Copy the apply_json_patch.py file to your project\n2. Ensure jsonpatch and pydantic are installed: pip install jsonpatch pydantic\n3. Import and use: from apply_json_patch import apply_json_patch\n\nThe function is self-contained and works without any installation or sys.path manipulation on the caller side. The script handles its own internal path setup automatically.",
+          "metadata": {}
+        },
+        "error_handling": {
+          "type": "Doc",
+          "id": "error_handling",
+          "label": "Error Handling",
+          "description": "The function returns None on success, or an ApplyPatchErrorResponse object on error. Check the response to get detailed error information:\n\nif result := apply_json_patch(path, patch):\n    print(result.error)\n    if result.hint:\n        print(result.hint)\n    if result.details:\n        print(result.details)",
+          "metadata": {}
+        }
+      }
     }
   }
 }
