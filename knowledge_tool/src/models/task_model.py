@@ -207,7 +207,7 @@ class Task(RenderableModel):
 
         # Generate TOC for Plan if the Doc has render_toc enabled
         if self.plan.opts and self.plan.opts.render_toc:
-            plan_toc = self._generate_doc_toc(self.plan)
+            plan_toc = self.plan.render_toc()
             # Indent plan's TOC under Plan
             for toc_line in plan_toc:
                 toc_lines.append("  " + toc_line)

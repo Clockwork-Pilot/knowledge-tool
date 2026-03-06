@@ -361,10 +361,12 @@ class TestTaskRender:
             description="Task plan"
         )
 
+        # Child with metadata so it generates TOC entries
         child_section = Doc(
             id="section1",
             label="Section 1",
             description="Child section content",
+            metadata={"status": "active"},
             opts=Opts(render_toc=True)
         )
 
@@ -385,8 +387,9 @@ class TestTaskRender:
         assert "## Table of Contents" in rendered
         assert "- [Iterations](#iterations)" in rendered
         assert "  - [iteration_1](#iteration_1)" in rendered
-        # Child's TOC should be indented under iteration
-        assert "    - [Section 1](#section-1)" in rendered
+        # Child's TOC entries should be indented under iteration
+        # The child has metadata, so it generates a "Status" TOC entry
+        assert "    - [Status](#status)" in rendered
 
 
 if __name__ == "__main__":
