@@ -41,7 +41,7 @@ class Doc(RenderableModel):
         # Insert TOC if enabled in opts
         opts = doc_dict.get("opts", {})
         if opts.get("render_toc", False):
-            toc_lines = self._generate_toc(doc_dict)
+            toc_lines = self.render_toc()
             if toc_lines:
                 # Find where to insert TOC (after heading and description)
                 toc_insert_pos = 1
@@ -60,6 +60,15 @@ class Doc(RenderableModel):
 
         markdown_content = "\n".join(lines)
         return markdown_content
+
+    def render_toc(self) -> list:
+        """Generate TOC for this Doc's children structure.
+
+        Returns:
+            List of TOC lines with proper indentation and anchors.
+        """
+        doc_dict = json.loads(self.model_dump_json(exclude_none=True))
+        return self._generate_toc(doc_dict)
 
     @staticmethod
     def _render_node(node: Dict[str, Any], lines: list, level: int = 1) -> None:

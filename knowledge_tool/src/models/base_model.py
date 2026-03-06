@@ -30,3 +30,14 @@ class RenderableModel(BaseModel, ABC):
             List of tip strings, or empty list if no tips. Override in subclasses.
         """
         return []
+
+    def render_toc(self) -> list:
+        """Generate table of contents lines for this model's structure.
+
+        Subclasses override to provide TOC based on their structure.
+        TOC lines are markdown-formatted with proper indentation and anchors.
+
+        Returns:
+            List of TOC lines (empty list if no TOC applicable).
+        """
+        return []

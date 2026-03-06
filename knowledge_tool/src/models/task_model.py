@@ -99,6 +99,20 @@ class Iteration(RenderableModel):
 
         return "\n".join(lines).strip()
 
+    def render_toc(self) -> list:
+        """Generate TOC for Iteration's summary structure.
+
+        Returns nested TOC from summary.render_toc() if summary Doc has render_toc=true.
+
+        Returns:
+            List of TOC lines from summary (empty if no summary or render_toc not enabled).
+        """
+        if not self.summary:
+            return []
+
+        # Only include summary's TOC if it has render_toc=true
+        return self.summary.render_toc()
+
 
 class Task(RenderableModel):
     """Represents a task with plan and iterations."""
@@ -121,8 +135,13 @@ class Task(RenderableModel):
         lines.append(f"# Task: {self.id}")
         lines.append("")
 
-        # Check if TOC should be rendered
-        render_toc = self.opts and self.opts.render_toc
+        # Insert TOC if applicable
+        toc_lines = self.render_toc()
+        if toc_lines:
+            lines.append("## Table of Contents")
+            lines.append("")
+            lines.extend(toc_lines)
+            lines.append("")
 
         # Render plan section
         lines.append("## Plan")
@@ -248,6 +267,49 @@ class Task(RenderableModel):
                 child_toc = Task._generate_doc_toc(child_node, level + 1)
                 for toc_line in child_toc:
                     toc_lines.append("  " + toc_line)
+
+        return toc_lines
+
+    def render_toc(self) -> list:
+        """Generate TOC for Task structure with Plan and Iterations sections.
+
+        Includes:
+        - Plan entry with nested TOC from plan.render_toc() if plan has render_toc=true
+        - Iterations entry with iteration entries and their nested TOCs
+
+        Returns:
+            List of TOC lines with proper indentation and anchors.
+        """
+        toc_lines = []
+
+        # Plan entry
+        toc_lines.append("- [Plan](#plan)")
+        if self.plan:
+            plan_toc = self.plan.render_toc()
+            if plan_toc:
+                # Indent plan's TOC entries
+                for line in plan_toc:
+                    toc_lines.append("  " + line)
+
+        # Iterations entry (if iterations exist)
+        if self.iterations:
+            toc_lines.append("- [Iterations](#iterations)")
+
+            # Sort iterations by ID
+            sorted_iterations = sorted(
+                self.iterations.items(), key=lambda x: (len(x[0]), x[0])
+            )
+
+            for iter_id, iteration in sorted_iterations:
+                # Create anchor for iteration (lowercase, spaces/underscores to hyphens)
+                anchor = iter_id.lower().replace("_", "-")
+                toc_lines.append(f"  - [{iter_id}](#{anchor})")
+
+                # Add nested TOC from iteration if it has a summary with render_toc=true
+                iteration_toc = iteration.render_toc()
+                if iteration_toc:
+                    for line in iteration_toc:
+                        toc_lines.append("    " + line)
 
         return toc_lines
 
