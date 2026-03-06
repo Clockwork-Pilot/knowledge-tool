@@ -99,16 +99,51 @@ def load_external_models(external_models_path: str) -> Dict[str, Type[Renderable
     return external_models
 
 
+def _search_config_upward(config_filename: str) -> Optional[Path]:
+    """
+    Search for config file by walking up directory hierarchy from cwd.
+
+    This enables automatic discovery of knowledge_config.yaml in the project
+    root when used as a plugin or in a Claude project, without requiring
+    explicit environment variable configuration.
+
+    Args:
+        config_filename: Name of config file to search for
+
+    Returns:
+        Path to config file if found, None otherwise
+    """
+    current_dir = Path.cwd()
+
+    # Search up to 10 levels deep to avoid infinite loops
+    for _ in range(10):
+        config_path = current_dir / config_filename
+        if config_path.exists():
+            return config_path
+
+        # Move to parent directory
+        parent = current_dir.parent
+        if parent == current_dir:
+            # Reached filesystem root
+            break
+        current_dir = parent
+
+    return None
+
+
 def load_config() -> tuple[Dict, Path]:
     """
     Load knowledge tool configuration from knowledge_config.yaml.
 
     Resolution order:
-    1. KNOWLEDGE_TOOL_CONFIG_ROOT environment variable (if set)
-    2. CLAUDE_PLUGIN_ROOT environment variable (if set)
-    3. CLAUDE_PROJECT_ROOT environment variable (if set)
-    4. Same directory as apply_json_patch.py script
-    5. Default empty config if file not found (no extra models)
+    1. KNOWLEDGE_TOOL_CONFIG_ROOT environment variable (explicit override)
+    2. Search upward from current working directory (automatic project discovery)
+    3. Same directory as apply_json_patch.py script (plugin fallback)
+    4. Default empty config if file not found (no extra models)
+
+    The upward directory search enables automatic discovery when used as a Claude
+    plugin or in a project - the config file is found in any parent directory
+    without requiring manual configuration.
 
     Returns:
         Tuple of (config dict, config file path)
@@ -116,17 +151,14 @@ def load_config() -> tuple[Dict, Path]:
     config_filename = "knowledge_config.yaml"
     config_path = None
 
-    # 1. Check KNOWLEDGE_TOOL_CONFIG_ROOT override
+    # 1. Check KNOWLEDGE_TOOL_CONFIG_ROOT override (explicit user configuration)
     if config_root := os.getenv('KNOWLEDGE_TOOL_CONFIG_ROOT'):
         config_path = Path(config_root) / config_filename
-    # 2. Check CLAUDE_PLUGIN_ROOT (when used as plugin)
-    elif claude_plugin_root := os.getenv('CLAUDE_PLUGIN_ROOT'):
-        config_path = Path(claude_plugin_root) / config_filename
-    # 3. Check CLAUDE_PROJECT_ROOT (when used in project)
-    elif claude_project_root := os.getenv('CLAUDE_PROJECT_ROOT'):
-        config_path = Path(claude_project_root) / config_filename
+    # 2. Search upward from current directory (automatic project discovery)
+    elif upward_path := _search_config_upward(config_filename):
+        config_path = upward_path
     else:
-        # 4. Look in same directory as this module (apply_json_patch location)
+        # 3. Look in same directory as this module (apply_json_patch/knowledge_tool fallback)
         script_dir = Path(__file__).parent.parent
         config_path = script_dir / config_filename
 

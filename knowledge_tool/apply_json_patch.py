@@ -14,6 +14,7 @@ from knowledge_tool.common.response import ApplyPatchErrorResponse
 from knowledge_tool.common.file_tools import write_protected_file
 from knowledge_tool.common.render import render
 from knowledge_tool.common.model_loader import get_model_registry
+from knowledge_tool.knowledge_files_registry import add_knowledge_files
 
 
 def apply_json_patch(
@@ -138,6 +139,14 @@ def apply_json_patch(
         # Rendering failure doesn't fail the patch operation
         # JSON was updated successfully, but warn the user
         print(f"⚠️  Warning: Failed to render markdown: {str(e)}", file=sys.stderr)
+
+    # 8. Register JSON and MD files in knowledge files registry
+    md_path = doc_path.with_suffix(".md")
+    try:
+        add_knowledge_files([str(doc_path), str(md_path)])
+    except Exception as e:
+        # Registration failure doesn't fail the patch operation
+        print(f"⚠️  Warning: Failed to register knowledge files: {str(e)}", file=sys.stderr)
 
     return None
 

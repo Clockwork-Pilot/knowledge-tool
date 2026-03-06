@@ -19,6 +19,10 @@
     - [knowledge_config.yaml](#knowledge_configyaml)
     - [Environment Variables](#environment-variables)
     - [Automatic Discovery](#automatic-discovery)
+    - [Configuration File Format](#configuration-file-format)
+      - [Built-in Models](#built-in-models)
+      - [Pluggable Models Directories](#pluggable-models-directories)
+      - [Model Merging Strategy](#model-merging-strategy)
 - [File Modification Workflow](#file-modification-workflow)
 - [Architecture](#architecture)
   - [Json Patch](#json-patch)
@@ -27,7 +31,7 @@
   - [File Protection Purpose](#file-protection-purpose)
 - [Testing](#testing)
 
-Knowledge Base API documentation with apply_json_patch operations, error handling, and file protection
+Updated description
 
 **Version:** 2.0.0
 
@@ -42,23 +46,12 @@ Command-line script interfaces
 #### apply_json_patch.py
 Apply JSON Patch operations to knowledge documents from command line with automatic markdown rendering. Supports both command-line arguments and stdin input to avoid shell escaping issues. Works with built-in models and pluggable custom models configured in knowledge_config.yaml.
 
-**Example Code:** python tools/apply_json_patch.py doc.json '[{"op": "replace", "path": "/label", "value": "New Label"}]'
-
 **Expected Output:** ✓ Patched doc.json
-
-**With Pluggable Models:** # Configure pluggable_models_dirs in knowledge_config.yaml, then:
-python tools/apply_json_patch.py doc.json '[{"op": "replace", "path": "/type", "value": "CustomType"}]'
 
 ##### Using Stdin for Complex Patches
 For complex JSON patches with many nested quotes, pass the patch via stdin to avoid shell escaping issues.
 
 **Why:** Shell escaping can be error-prone with deeply nested JSON. Use stdin for reliability.
-
-**Simple Example:** python tools/apply_json_patch.py doc.json '[{"op": "replace", "path": "/label", "value": "new"}]'
-
-**Complex Example:** cat patch.json | python tools/apply_json_patch.py --stdin knowledge_tool.json
-
-**Create With Stdin:** cat patch.json | python tools/apply_json_patch.py --stdin --create doc.json
 
 ### Functions
 Python function interfaces for programmatic use
@@ -111,7 +104,7 @@ When apply_json_patch succeeds, it always attempts to regenerate the markdown fi
 **Important:** Always check stderr for warnings about rendering failures
 
 #### Pluggable Models
-Extend apply_json_patch with custom model types by configuring external model definitions in knowledge_config.yaml. Models are auto-discovered based on environment variables: KNOWLEDGE_TOOL_CONFIG_ROOT, CLAUDE_PLUGIN_ROOT, or CLAUDE_PROJECT_ROOT.
+Extend apply_json_patch with custom model types by configuring external model definitions in knowledge_config.yaml. Models are auto-discovered by searching for knowledge_config.yaml in the project directory hierarchy.
 
 ##### Overview
 Pluggable models allow you to define custom document types beyond the built-in Doc model. External models are loaded dynamically and work seamlessly with apply_json_patch validation and rendering.
@@ -183,9 +176,20 @@ When true, renders node before siblings with render_priority=false
 Knowledge tool models are configured via knowledge_config.yaml file. The tool automatically searches for this file in the following locations, in priority order.
 
 #### knowledge_config.yaml
-YAML configuration file that defines pluggable model directories. List directories containing custom RenderableModel implementations.
+YAML configuration file that defines pluggable model directories for loading custom RenderableModel implementations.
 
-**Example:** pluggable_models_dirs:
+**File Location:**
+- Default: Same directory as apply_json_patch.py script
+- Or: Project root when used as dependency
+- Or: Use KNOWLEDGE_TOOL_CONFIG_ROOT environment variable to override
+
+**Content:** Single key `pluggable_models_dirs` with list of relative or absolute paths to directories containing model definitions.
+
+**Paths:** Can be relative (to config file location) or absolute paths to model directories.
+
+**Example:** # Basic Configuration File:
+# Place this at project root or where apply_json_patch is called
+pluggable_models_dirs:
   - ./models
   - ./custom_models
   - /absolute/path/to/models
@@ -195,27 +199,52 @@ Control where knowledge_config.yaml is searched for.
 
 **Resolution Order:**
   1. KNOWLEDGE_TOOL_CONFIG_ROOT - Highest priority, explicitly set config directory
-  2. CLAUDE_PLUGIN_ROOT - When used as a Claude plugin
-  3. CLAUDE_PROJECT_ROOT - When used in a Claude project
-  4. Script directory (knowledge_tool/) - Default fallback
-  5. Empty config if not found - Only built-in models (Doc, Task, etc.)
+  2. Upward directory search - Walks up from current working directory
+  3. Script directory (knowledge_tool/) - Default fallback
+  4. Empty config if not found - Only built-in models (Doc, Task, etc.)
 
 **Examples:**
   - KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge-tool apply-json-patch doc.json '[...]'
-  - CLAUDE_PLUGIN_ROOT=/path/to/plugin apply-json-patch doc.json '[...]'
-  - CLAUDE_PROJECT_ROOT=/path/to/project apply-json-patch doc.json '[...]'
 
 #### Automatic Discovery
-When used as a Claude plugin or in a Claude project, knowledge_config.yaml is automatically found without manual configuration.
+When used as a Claude plugin or in a Claude project, knowledge_config.yaml is automatically found without manual configuration by searching upward from the current working directory.
 
-**Plugin Usage:** Tool automatically uses CLAUDE_PLUGIN_ROOT to find knowledge_config.yaml
+**Plugin Usage:** Tool automatically searches for knowledge_config.yaml in parent directories
 
-**Project Usage:** Tool automatically uses CLAUDE_PROJECT_ROOT to find knowledge_config.yaml
+**Project Usage:** Tool automatically searches for knowledge_config.yaml in parent directories
 
 **Manual Override:** Set KNOWLEDGE_TOOL_CONFIG_ROOT to explicitly specify config location
 
+#### Configuration File Format
+The knowledge_config.yaml file configures pluggable model directories for the knowledge tool. Place this file in the same directory as apply_json_patch.py script, or set KNOWLEDGE_TOOL_CONFIG_ROOT environment variable to override the config location.
+
+The knowledge tool always loads built-in models. External models from pluggable_models_dirs are merged with built-in models.
+
+**File Location:** Same directory as apply_json_patch.py script
+
+**Env Override:** KNOWLEDGE_TOOL_CONFIG_ROOT environment variable
+
+##### Built-in Models
+Built-in models are always loaded and available:
+- Doc: Default document model with hierarchical children
+- Task: Task with plan and iterations (from lifecycle_tool)
+- Iteration: Task iteration with metrics
+
+##### Pluggable Models Directories
+List of directories containing custom/pluggable knowledge models. Paths are relative to the config file location.
+
+**Format:** List of directory paths (relative or absolute)
+
+**Examples:**
+  - ./models
+  - ./custom_models
+  - /absolute/path/to/models
+
+##### Model Merging Strategy
+External models from pluggable_models_dirs are merged with built-in models. If a custom model has the same name as a built-in model, the custom model takes precedence and overrides the built-in one.
+
 ## File Modification Workflow
-How to properly modify knowledge documents using the tool. Models are loaded automatically from knowledge_config.yaml based on environment variables (KNOWLEDGE_TOOL_CONFIG_ROOT, CLAUDE_PLUGIN_ROOT, CLAUDE_PROJECT_ROOT).
+How to properly modify knowledge documents using the tool. Models are loaded automatically from knowledge_config.yaml by searching the project directory hierarchy.
 
 **Important:** ALWAYS use apply_json_patch to modify documents. Never edit JSON files directly.
 
