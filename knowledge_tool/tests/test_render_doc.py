@@ -179,9 +179,15 @@ class TestIterationRender:
         """Test rendering an Iteration with summary field."""
         from models import Iteration
 
+        summary_doc = Doc(
+            id="summary",
+            label="Summary",
+            description="Fixed authentication bug and improved performance"
+        )
+
         iteration = Iteration(
             id="iteration_1",
-            summary="Fixed authentication bug and improved performance"
+            summary=summary_doc
         )
 
         rendered = iteration.render()

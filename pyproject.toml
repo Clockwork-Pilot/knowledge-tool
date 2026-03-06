@@ -20,4 +20,3 @@ pythonpath = ["src"]
 testpaths = ["knowledge_tool/tests"]
 python_files = ["test_*.py"]
 norecursedirs = ["test_models"]
-asyncio_default_fixture_loop_scope = "function"
