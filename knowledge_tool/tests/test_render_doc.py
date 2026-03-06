@@ -172,5 +172,35 @@ class TestRenderWithExternalModels:
             Path(temp_path).with_suffix(".md").unlink(missing_ok=True)
 
 
+class TestIterationRender:
+    """Test Iteration model render() method with summary field."""
+
+    def test_iteration_render_with_summary(self):
+        """Test rendering an Iteration with summary field."""
+        from models import Iteration
+
+        iteration = Iteration(
+            id="iteration_1",
+            summary="Fixed authentication bug and improved performance"
+        )
+
+        rendered = iteration.render()
+
+        assert "### iteration_1" in rendered
+        assert "Fixed authentication bug and improved performance" in rendered
+
+    def test_iteration_render_without_summary(self):
+        """Test rendering an Iteration without summary field."""
+        from models import Iteration
+
+        iteration = Iteration(id="iteration_1")
+
+        rendered = iteration.render()
+
+        assert "### iteration_1" in rendered
+        # Summary section should not appear if summary is None
+        assert "None" not in rendered
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

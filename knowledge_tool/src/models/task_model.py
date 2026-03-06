@@ -39,6 +39,7 @@ class Iteration(RenderableModel):
 
     id: str = Field(..., description="Unique iteration identifier")
     type: Literal["Iteration"] = "Iteration"
+    summary: Optional[str] = Field(None, description="Summary of the iteration")
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Iteration metadata (created_at, updated_at, etc.)"
     )
@@ -57,6 +58,11 @@ class Iteration(RenderableModel):
         lines = []
         lines.append(f"### {self.id}")
         lines.append("")
+
+        # Render summary
+        if self.summary:
+            lines.append(self.summary)
+            lines.append("")
 
         # Render metadata
         if self.metadata:
