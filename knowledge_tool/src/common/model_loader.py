@@ -7,7 +7,7 @@ import yaml
 import importlib.util
 from pathlib import Path
 from typing import Dict, Optional, Type, List
-from knowledge_tool.models import MODEL_REGISTRY, RenderableModel
+from src.models import MODEL_REGISTRY, RenderableModel
 
 
 def load_external_models(external_models_path: str) -> Dict[str, Type[RenderableModel]]:

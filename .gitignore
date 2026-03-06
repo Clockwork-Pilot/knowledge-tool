@@ -1,4 +1,7 @@
 .claude/
+.credentials/
+protected_files.txt
+
 
 # Python
 __pycache__/

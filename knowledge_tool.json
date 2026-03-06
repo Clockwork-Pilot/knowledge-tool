@@ -398,6 +398,16 @@
         "render_priority": true,
         "render_toc": false
       }
+    },
+    "installation_note": {
+      "type": "Doc",
+      "id": "installation_note",
+      "label": "Installation Note",
+      "description": "Do NOT install this package. Use the scripts directly without installation. The knowledge_tool is designed to work as-is without requiring package installation via pip. Simply run the scripts directly from their location with: python /path/to/knowledge_tool/apply_json_patch.py doc.json '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"Updated\"}]'. The script automatically locates its dependencies in the src/ directory without requiring installation. This approach works from any directory, requires only Python dependencies installed via pip install -r requirements.txt, needs no package installation, and provides a cleaner project structure.",
+      "metadata": {
+        "importance": "critical",
+        "applies_to": "all scripts"
+      }
     }
   }
 }

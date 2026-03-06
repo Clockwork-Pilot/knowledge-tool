@@ -26,14 +26,23 @@ To view the documentation: See `knowledge_tool.md` (auto-generated from JSON)
 # Create and activate virtual environment
 python -m venv .venv
 source .venv/bin/activate
-pip install -e .
+
+# Install dependencies only (do NOT install the package itself)
+pip install -r requirements.txt
 
 # Apply JSON Patch to a document
-python -m tools.apply_json_patch doc.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
+python /path/to/knowledge_tool/apply_json_patch.py doc.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
 
 # Create new document
-python -m tools.apply_json_patch --create doc.json '[{"op": "add", "path": "/id", "value": "my_doc"}]'
+python /path/to/knowledge_tool/apply_json_patch.py doc.json '[{"op": "add", "path": "/id", "value": "my_doc"}]'
 ```
+
+## Installation Note
+
+⚠️ **Do NOT install this package with `pip install`**. Use the scripts directly:
+- The scripts are self-contained and work from any directory without installation
+- Run `apply_json_patch.py` directly: `python /path/to/apply_json_patch.py`
+- The script automatically locates its dependencies in the `src/` directory
 
 ## Configuration
 
@@ -54,7 +63,7 @@ mkdir $(pwd)/.credentials -p && \
     -v $(pwd)/.credentials:/home/node/:Z  \
     -v $(pwd):/project y2-coder
 
-# Inside container: activate venv and use the tools
+# Inside container: activate venv and use the tools (do NOT pip install)
 cd /project && source .venv/bin/activate
-python tools/apply_json_patch.py --help
+python apply_json_patch.py --help
 ```

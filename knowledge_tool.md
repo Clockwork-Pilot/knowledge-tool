@@ -30,6 +30,7 @@
   - [Workflow](#workflow)
   - [File Protection Purpose](#file-protection-purpose)
 - [Testing](#testing)
+- [Installation Note](#installation-note)
 
 Updated description
 
@@ -351,3 +352,10 @@ Comprehensive test suite with 19 tests covering all functionality.
 pytest tools/ -v
 pytest
 ```
+
+## Installation Note
+Do NOT install this package. Use the scripts directly without installation. The knowledge_tool is designed to work as-is without requiring package installation via pip. Simply run the scripts directly from their location with: python /path/to/knowledge_tool/apply_json_patch.py doc.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'. The script automatically locates its dependencies in the src/ directory without requiring installation. This approach works from any directory, requires only Python dependencies installed via pip install -r requirements.txt, needs no package installation, and provides a cleaner project structure.
+
+**Importance:** critical
+
+**Applies To:** all scripts
