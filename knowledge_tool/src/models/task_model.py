@@ -315,8 +315,8 @@ class Task(RenderableModel):
             for iter_key, iteration in sorted_iterations:
                 # Use iteration's id field (not dict key) for heading and anchor
                 iter_id = iteration.id
-                # Create anchor for iteration (lowercase, spaces/underscores to hyphens)
-                anchor = iter_id.lower().replace("_", "-")
+                # Create anchor matching standard markdown: lowercase, spaces→hyphens only
+                anchor = iter_id.lower().replace(" ", "-")
                 toc_lines.append(f"  - [{iter_id}](#{anchor})")
 
                 # Add nested TOC from iteration's summary only if summary has render_toc=true

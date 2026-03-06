@@ -82,12 +82,10 @@ class Doc(RenderableModel):
         metadata = doc_dict.get("metadata", {})
         if metadata:
             for key in metadata.keys():
-                # Format anchor: lowercase, spaces/underscores to hyphens, remove special chars
-                anchor = key.lower()
-                anchor = anchor.replace(" ", "-").replace("_", "-")
-                anchor = re.sub(r'[^\w-]', '', anchor)
-
                 formatted_key = Doc._format_key(key)
+                # Generate anchor from formatted key: lowercase, spaces→hyphens
+                anchor = formatted_key.lower().replace(" ", "-")
+
                 toc_lines.append(f"- [{formatted_key}](#{anchor})")
 
         # Add TOC entries for children
