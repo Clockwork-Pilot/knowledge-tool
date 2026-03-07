@@ -7,7 +7,7 @@ import tempfile
 from pathlib import Path
 import pytest
 
-from apply_json_patch import apply_json_patch
+from patch_knowledge_document import apply_json_patch
 from common.response import ApplyPatchErrorResponse
 
 

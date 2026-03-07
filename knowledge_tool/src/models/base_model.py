@@ -45,3 +45,14 @@ class RenderableModel(BaseModel, ABC):
             List of TOC lines (empty list if no TOC applicable).
         """
         return []
+
+    def can_be_root(self) -> bool:
+        """Indicate whether this model can be created as a root document.
+
+        Root documents can be created directly using create_knowledge_document.py.
+        Non-root models can only exist as children of other documents.
+
+        Returns:
+            True if this model can be a root document, False otherwise.
+        """
+        return False  # Default: models must explicitly opt-in to be root

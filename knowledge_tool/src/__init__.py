@@ -14,7 +14,7 @@ from .models import (
 parent_dir = Path(__file__).parent.parent
 if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
-from apply_json_patch import apply_json_patch
+from patch_knowledge_document import apply_json_patch
 
 from .knowledge_files_registry import add_knowledge_files
 

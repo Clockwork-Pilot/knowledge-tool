@@ -137,6 +137,16 @@ class Iteration(RenderableModel):
 
         return toc_lines
 
+    def can_be_root(self) -> bool:
+        """Iteration cannot be created as a root document.
+
+        Iterations only exist as children within Task documents.
+
+        Returns:
+            False - Iteration cannot be a root document.
+        """
+        return False
+
 
 class Task(RenderableModel):
     """Represents a task with plan and iterations."""
@@ -327,6 +337,14 @@ class Task(RenderableModel):
                         toc_lines.append("    " + line)
 
         return toc_lines
+
+    def can_be_root(self) -> bool:
+        """Task can be created as a root document.
+
+        Returns:
+            True - Task can be a root document.
+        """
+        return True
 
 
 Task.model_rebuild()

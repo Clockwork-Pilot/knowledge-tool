@@ -282,6 +282,14 @@ class Doc(RenderableModel):
         """
         return key.replace("_", " ").title()
 
+    def can_be_root(self) -> bool:
+        """Doc can be created as a root document.
+
+        Returns:
+            True - Doc can be a root document.
+        """
+        return True
+
     def tips(self, json_path: str = "") -> list:
         """Check for best practice violations and return tips recursively.
 

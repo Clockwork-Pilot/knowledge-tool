@@ -9,13 +9,13 @@ from typing import Any, Dict, List, Optional
 from jsonpatch import JsonPatch, JsonPatchException
 from pydantic import ValidationError
 
-# Support direct execution: add src to path so modules can be imported
-_script_dir = Path(__file__).parent
-_src_dir = _script_dir / "src"
+# Auto-setup: Add src directory to path (handles direct execution or package import)
+_pkg_dir = Path(__file__).parent
+_src_dir = _pkg_dir / "src"
 if str(_src_dir) not in sys.path:
     sys.path.insert(0, str(_src_dir))
 
-# Import directly from src modules
+# Now we can import from src modules
 from models import Doc
 from common.response import ApplyPatchErrorResponse
 from common.file_tools import write_protected_file
