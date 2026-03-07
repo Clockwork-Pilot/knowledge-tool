@@ -143,7 +143,7 @@ def load_config() -> tuple[Dict, Path]:
     Resolution order:
     1. KNOWLEDGE_TOOL_CONFIG_ROOT environment variable (explicit override)
     2. Search upward from current working directory (automatic project discovery)
-    3. Same directory as apply_json_patch.py script (plugin fallback)
+    3. Same directory as patch_knowledge_document.py script (plugin fallback)
     4. Default empty config if file not found (no extra models)
 
     The upward directory search enables automatic discovery when used as a Claude
@@ -163,7 +163,7 @@ def load_config() -> tuple[Dict, Path]:
     elif upward_path := _search_config_upward(config_filename):
         config_path = upward_path
     else:
-        # 3. Look in same directory as this module (apply_json_patch/knowledge_tool fallback)
+        # 3. Look in same directory as this module (patch_knowledge_document/knowledge_tool fallback)
         script_dir = Path(__file__).parent.parent
         config_path = script_dir / config_filename
 

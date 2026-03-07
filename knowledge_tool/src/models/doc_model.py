@@ -28,6 +28,11 @@ class Doc(RenderableModel):
     opts: Optional[Opts] = None
     children: Optional[Dict[str, "Doc"]] = None
 
+    @classmethod
+    def create_default(cls) -> "Doc":
+        """Create a default Doc instance for testing or creation."""
+        return cls(id=f"{cls.__name__.lower()}_1", label=f"{cls.__name__} Document")
+
     def render(self, include_toc: bool = True) -> str:
         """Render Doc to markdown string.
 
@@ -282,7 +287,7 @@ class Doc(RenderableModel):
         """
         return key.replace("_", " ").title()
 
-    def can_be_root(self) -> bool:
+    def is_can_be_root(self) -> bool:
         """Doc can be created as a root document.
 
         Returns:

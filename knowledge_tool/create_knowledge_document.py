@@ -2,14 +2,12 @@
 """Create a new knowledge document of a specified model type.
 
 Creates a JSON document of the given model type at the specified path.
-Supports both built-in models (Doc, Task, Iteration) and pluggable custom models
-configured in knowledge_config.yaml.
+Supports both built-in models and pluggable custom models configured in knowledge_config.yaml.
 """
 
 import json
 import sys
 from pathlib import Path
-from datetime import datetime
 
 # Auto-setup: Add src directory to path (handles direct execution or package import)
 _pkg_dir = Path(__file__).parent
@@ -18,65 +16,31 @@ if str(_src_dir) not in sys.path:
     sys.path.insert(0, str(_src_dir))
 
 # Now we can import from src modules
-from models import Doc
 from common.model_loader import get_model_registry
 
 
-def _create_temp_instance(model_class, model_type: str):
-    """Create a temporary instance to check model properties.
+def _is_creatable_model(model_type: str, model_class) -> bool:
+    """Predicate: check if model can be created as a root document.
 
     Args:
-        model_class: The model class to instantiate
         model_type: The model type name
+        model_class: The model class to check
 
     Returns:
-        A temporary instance or None if instantiation fails
+        True if model can be created as root document, False otherwise
     """
     try:
-        if model_type == "Task":
-            from models import Task
-            plan = Doc(id="test", label="Test")
-            return Task(id="test", plan=plan)
-        elif model_type == "Iteration":
-            from models import Iteration
-            return Iteration(id="test")
-        elif model_type == "Doc":
-            return Doc(id="test", label="Test")
-        else:
-            # Try with minimal fields
-            return model_class(
-                id="test",
-                type=model_type,
-            )
+        instance = model_class.create_default()
+        return instance.is_can_be_root()
     except Exception:
-        return None
-
-
-def _get_creatable_models(registry: dict) -> list:
-    """Get list of models that can be created as root documents.
-
-    Args:
-        registry: Model registry dictionary
-
-    Returns:
-        List of creatable model type names
-    """
-    creatable = []
-    for model_type, model_class in registry.items():
-        try:
-            instance = _create_temp_instance(model_class, model_type)
-            if instance and instance.can_be_root():
-                creatable.append(model_type)
-        except Exception:
-            pass
-    return creatable
+        return False
 
 
 def create_knowledge_document(model_type: str, document_path: str) -> int:
     """Create a new knowledge document of the specified type.
 
     Args:
-        model_type: Name of the model type (e.g., 'Doc', 'Task', 'Iteration')
+        model_type: Name of the model type to create
         document_path: Path where the document will be created
 
     Returns:
@@ -107,69 +71,13 @@ def create_knowledge_document(model_type: str, document_path: str) -> int:
     model_class = registry[model_type]
 
     # Check if model can be created as root document
-    try:
-        # Create a temporary instance to check can_be_root()
-        # We need to instantiate with minimal required fields
-        temp_instance = _create_temp_instance(model_class, model_type)
-        if temp_instance and not temp_instance.can_be_root():
-            creatable_models = _get_creatable_models(registry)
-            print(f"✗ Model type cannot be created as root document: {model_type}")
-            print(f"Creatable models: {', '.join(sorted(creatable_models))}")
-            return 1
-    except Exception as e:
-        # If we can't instantiate to check, we'll try to create it anyway
-        pass
+    if not _is_creatable_model(model_type, model_class):
+        print(f"✗ Model type cannot be created as root document: {model_type}")
+        return 1
 
-    # Create document instance based on model type
+    # Create document instance
     try:
-        now = datetime.now().isoformat()
-
-        if model_type == "Task":
-            # Task requires a plan Doc
-            from models import Task
-            plan = Doc(
-                id="plan",
-                label="Task Plan",
-                metadata={"created_at": now, "updated_at": now},
-            )
-            document = Task(
-                id="task_1",
-                plan=plan,
-                iterations=None,
-            )
-        elif model_type == "Iteration":
-            # Iteration is a standalone document
-            from models import Iteration
-            document = Iteration(
-                id="iteration_1",
-                metadata={"created_at": now, "updated_at": now},
-            )
-        elif model_type == "Doc":
-            # Doc is the base model
-            document = Doc(
-                id="doc_1",
-                label="Knowledge Document",
-                metadata={"created_at": now, "updated_at": now},
-            )
-        else:
-            # For custom models, try to instantiate with basic fields
-            # Assume the model has at least 'id' and 'type' fields
-            try:
-                document = model_class(
-                    id=f"{model_type.lower()}_1",
-                    type=model_type,
-                    metadata={"created_at": now, "updated_at": now},
-                )
-            except TypeError:
-                # If that fails, try with just the required fields
-                try:
-                    document = model_class(
-                        id=f"{model_type.lower()}_1",
-                        type=model_type,
-                    )
-                except TypeError as e:
-                    print(f"✗ Error instantiating {model_type}: {e}")
-                    return 1
+        document = model_class.create_default()
 
         # Ensure parent directory exists
         doc_file.parent.mkdir(parents=True, exist_ok=True)

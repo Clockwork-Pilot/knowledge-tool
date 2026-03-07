@@ -4,11 +4,11 @@ A reusable knowledge base system with JSON Patch operations, validation, and aut
 
 ## Important: Read-Only Files
 
-❌ DO NOT Edit Read-only `.json` or `.md` Files Directly. 
+❌ DO NOT Edit Read-only `.json` or `.md` Files Directly.
 
-All modifications must go through `apply_json_patch` 
+All modifications must go through `patch_knowledge_document`
 
-If you encounter "Permission denied" when trying to edit, this is by design—use `apply_json_patch` instead.
+If you encounter "Permission denied" when trying to edit, this is by design—use `patch_knowledge_document` instead.
 
 ## Documentation
 
@@ -31,17 +31,17 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Apply JSON Patch to a document
-python /path/to/knowledge_tool/apply_json_patch.py doc.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
+python /path/to/knowledge_tool/patch_knowledge_document.py doc.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
 
 # Create new document
-python /path/to/knowledge_tool/apply_json_patch.py doc.json '[{"op": "add", "path": "/id", "value": "my_doc"}]'
+python /path/to/knowledge_tool/patch_knowledge_document.py doc.json '[{"op": "add", "path": "/id", "value": "my_doc"}]'
 ```
 
 ## Installation Note
 
 ⚠️ **Do NOT install this package with `pip install`**. Use the scripts directly:
 - The scripts are self-contained and work from any directory without installation
-- Run `apply_json_patch.py` directly: `python /path/to/apply_json_patch.py`
+- Run `patch_knowledge_document.py` directly: `python /path/to/patch_knowledge_document.py`
 - The script automatically locates its dependencies in the `src/` directory
 
 ## Configuration

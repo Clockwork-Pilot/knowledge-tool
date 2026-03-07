@@ -46,7 +46,7 @@ class RenderableModel(BaseModel, ABC):
         """
         return []
 
-    def can_be_root(self) -> bool:
+    def is_can_be_root(self) -> bool:
         """Indicate whether this model can be created as a root document.
 
         Root documents can be created directly using create_knowledge_document.py.

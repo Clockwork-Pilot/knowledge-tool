@@ -49,6 +49,11 @@ class Iteration(RenderableModel):
         None, description="Coverage metrics per test (test_name -> lines_covered)"
     )
 
+    @classmethod
+    def create_default(cls) -> "Iteration":
+        """Create a default Iteration instance."""
+        return cls(id=f"{cls.__name__.lower()}_1")
+
     def render(self, include_toc: bool = True) -> str:
         """Render Iteration to markdown string.
 
@@ -137,7 +142,7 @@ class Iteration(RenderableModel):
 
         return toc_lines
 
-    def can_be_root(self) -> bool:
+    def is_can_be_root(self) -> bool:
         """Iteration cannot be created as a root document.
 
         Iterations only exist as children within Task documents.
@@ -158,6 +163,12 @@ class Task(RenderableModel):
         None, description="Iterations indexed by iteration ID"
     )
     opts: Optional[Opts] = Field(None, description="Task rendering options (render_toc, render_priority)")
+
+    @classmethod
+    def create_default(cls) -> "Task":
+        """Create a default Task instance with required plan."""
+        plan = Doc(id="plan", label="Plan")
+        return cls(id=f"{cls.__name__.lower()}_1", plan=plan)
 
     def render(self, include_toc: bool = True) -> str:
         """Render Task to markdown string.
@@ -338,7 +349,7 @@ class Task(RenderableModel):
 
         return toc_lines
 
-    def can_be_root(self) -> bool:
+    def is_can_be_root(self) -> bool:
         """Task can be created as a root document.
 
         Returns:

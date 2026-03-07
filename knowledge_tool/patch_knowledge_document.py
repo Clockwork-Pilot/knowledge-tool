@@ -261,7 +261,7 @@ def main() -> None:
     """CLI entry point."""
     if len(sys.argv) < 2:
         print(
-            "Usage: python3 apply_json_patch.py [--stdin] [--schema] <document_path> [json_patch]",
+            "Usage: python3 patch_knowledge_document.py [--stdin] [--schema] <document_path> [json_patch]",
             file=sys.stderr,
         )
         print("\nOptions:", file=sys.stderr)
@@ -269,19 +269,19 @@ def main() -> None:
         print("  --schema   Print JSON schema for model type in document", file=sys.stderr)
         print("\nExamples:", file=sys.stderr)
         print(
-            '  python3 apply_json_patch.py doc.json \'[{"op": "replace", "path": "/label", "value": "new"}]\'',
+            '  python3 patch_knowledge_document.py doc.json \'[{"op": "replace", "path": "/label", "value": "new"}]\'',
             file=sys.stderr,
         )
         print(
-            '  cat patch.json | python3 apply_json_patch.py --stdin doc.json',
+            '  cat patch.json | python3 patch_knowledge_document.py --stdin doc.json',
             file=sys.stderr,
         )
         print(
-            '  python3 apply_json_patch.py doc.json --schema  # Print schema for model in doc.json',
+            '  python3 patch_knowledge_document.py doc.json --schema  # Print schema for model in doc.json',
             file=sys.stderr,
         )
         print(
-            '  python3 apply_json_patch.py doc.json  # Re-render only',
+            '  python3 patch_knowledge_document.py doc.json  # Re-render only',
             file=sys.stderr,
         )
         sys.exit(1)
