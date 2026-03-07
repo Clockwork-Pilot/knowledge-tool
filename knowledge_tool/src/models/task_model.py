@@ -192,29 +192,7 @@ class Task(RenderableModel):
                 lines.append("")
 
         markdown_content = "\n".join(lines).strip()
-
-        # Insert TOC if enabled
-        if render_toc:
-            toc_lines = self._generate_toc()
-            if toc_lines:
-                # Find where to insert TOC (after heading and any description)
-                lines_list = markdown_content.split("\n")
-                toc_insert_pos = 1
-                for i, line in enumerate(lines_list[1:], 1):
-                    if line.startswith("#") or line == "":
-                        continue
-                    toc_insert_pos = i
-                    break
-
-                lines_list.insert(toc_insert_pos, "")
-                lines_list.insert(toc_insert_pos + 1, "## Table of Contents")
-                lines_list.insert(toc_insert_pos + 2, "")
-                lines_list[toc_insert_pos + 3:toc_insert_pos + 3] = toc_lines
-                lines_list.insert(toc_insert_pos + 3 + len(toc_lines), "")
-
-                markdown_content = "\n".join(lines_list)
-
-        return markdown_content.strip()
+        return markdown_content
 
     def _generate_toc(self) -> list:
         """Generate table of contents for the task.
@@ -252,11 +230,10 @@ class Task(RenderableModel):
 
                 toc_lines.append(f"  - [{iter_id}](#{anchor})")
 
-                # Add summary TOC if summary exists and has render_toc enabled
-                if iteration.summary and iteration.summary.opts and iteration.summary.opts.render_toc:
-                    summary_toc = self._generate_doc_toc(iteration.summary)
-                    # Indent summary's TOC under the iteration
-                    for toc_line in summary_toc:
+                # Add iteration's children TOC if available
+                iteration_toc = iteration.render_toc()
+                if iteration_toc:
+                    for toc_line in iteration_toc:
                         toc_lines.append("    " + toc_line)
 
         return toc_lines
