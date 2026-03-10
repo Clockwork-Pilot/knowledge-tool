@@ -7,7 +7,7 @@ from datetime import datetime
 import pytest
 
 from models import (
-    Feature, Constraints, Task, MODEL_REGISTRY,
+    Feature, FeaturesScope, Task, MODEL_REGISTRY,
     ConstraintBash, ConstraintPrompt, ConstraintBashResult, ConstraintPromptResult,
     Constraint, Tests, FeatureResult
 )
@@ -64,19 +64,20 @@ class TestFeatureModel:
         assert "constraints" in data
 
 
-class TestConstraintsModel:
-    """Test Constraints model creation and rendering."""
+class TestFeaturesScopeModel:
+    """Test FeaturesScope model creation and rendering."""
 
-    def test_constraints_creation(self):
-        """Test creating a Constraints instance."""
-        constraints = Constraints()
+    def test_features_scope_creation(self):
+        """Test creating a FeaturesScope instance."""
+        features_scope = FeaturesScope(scope="local")
 
-        assert constraints.type == "Constraints"
-        assert constraints.features is None
-        assert constraints.metadata == {}
+        assert features_scope.type == "FeaturesScope"
+        assert features_scope.scope == "local"
+        assert features_scope.features is None
+        assert features_scope.metadata == {}
 
-    def test_constraints_with_features(self):
-        """Test Constraints with features."""
+    def test_features_scope_with_features(self):
+        """Test FeaturesScope with features."""
         feature1 = Feature(
             id="g1",
             description="First feature",
@@ -88,22 +89,24 @@ class TestConstraintsModel:
             constraint="cmd2"
         )
 
-        constraints = Constraints(
+        features_scope = FeaturesScope(
+            scope="global",
             features={"g1": feature1, "g2": feature2},
             metadata={"version": "1.0"}
         )
 
-        assert len(constraints.features) == 2
-        assert constraints.features["g1"].description == "First feature"
-        assert constraints.metadata["version"] == "1.0"
+        assert len(features_scope.features) == 2
+        assert features_scope.features["g1"].description == "First feature"
+        assert features_scope.metadata["version"] == "1.0"
+        assert features_scope.scope == "global"
 
-    def test_constraints_is_root(self):
-        """Test that Constraints can be a root document."""
-        constraints = Constraints()
-        assert constraints.is_can_be_root() is True
+    def test_features_scope_is_root(self):
+        """Test that FeaturesScope can be a root document."""
+        features_scope = FeaturesScope(scope="local")
+        assert features_scope.is_can_be_root() is True
 
-    def test_constraints_render(self):
-        """Test Constraints rendering to markdown."""
+    def test_features_scope_render(self):
+        """Test FeaturesScope rendering to markdown."""
         bash_constraint = ConstraintBash(
             id="c1",
             cmd="grep -q 'feature_x' src/main.py",
@@ -115,37 +118,39 @@ class TestConstraintsModel:
             constraints={"c1": bash_constraint}
         )
 
-        constraints = Constraints(
+        features_scope = FeaturesScope(
+            scope="local",
             features={"g1": feature},
             metadata={"created": "2025-03-08"}
         )
 
-        markdown = constraints.render()
+        markdown = features_scope.render()
 
         assert "## Features" in markdown
         assert "g1: Add feature X" in markdown
         assert "grep -q 'feature_x' src/main.py" in markdown
         assert "## Metadata" in markdown
 
-    def test_constraints_render_toc(self):
-        """Test Constraints table of contents rendering."""
+    def test_features_scope_render_toc(self):
+        """Test FeaturesScope table of contents rendering."""
         feature1 = Feature(id="g1", description="Feature 1", constraint="cmd1")
         feature2 = Feature(id="g2", description="Feature 2", constraint="cmd2")
 
-        constraints = Constraints(features={"g1": feature1, "g2": feature2})
-        toc = constraints.render_toc()
+        features_scope = FeaturesScope(scope="local", features={"g1": feature1, "g2": feature2})
+        toc = features_scope.render_toc()
 
         assert len(toc) > 0
         assert any("Features" in line for line in toc)
         assert any("g1" in line for line in toc)
         assert any("g2" in line for line in toc)
 
-    def test_constraints_default_factory(self):
-        """Test Constraints.create_default()."""
-        constraints = Constraints.create_default()
+    def test_features_scope_default_factory(self):
+        """Test FeaturesScope.create_default()."""
+        features_scope = FeaturesScope.create_default()
 
-        assert constraints.type == "Constraints"
-        assert constraints.features is None
+        assert features_scope.type == "FeaturesScope"
+        assert features_scope.scope == "local"
+        assert features_scope.features is None
 
 
 class TestTaskWithFeatures:
@@ -196,14 +201,14 @@ class TestTaskWithFeatures:
 class TestModelRegistry:
     """Test model registry includes new models."""
 
-    def test_constraints_in_registry(self):
-        """Test that Constraints is registered."""
-        assert "Constraints" in MODEL_REGISTRY
-        assert MODEL_REGISTRY["Constraints"] is Constraints
+    def test_features_scope_in_registry(self):
+        """Test that FeaturesScope is registered."""
+        assert "FeaturesScope" in MODEL_REGISTRY
+        assert MODEL_REGISTRY["FeaturesScope"] is FeaturesScope
 
     def test_all_root_models_registered(self):
         """Test all expected models are in registry."""
-        expected = ["Doc", "Constraints", "Task", "Iteration", "Tests"]
+        expected = ["Doc", "FeaturesScope", "Task", "Iteration", "Tests"]
         for model_name in expected:
             assert model_name in MODEL_REGISTRY, f"{model_name} not in MODEL_REGISTRY"
 

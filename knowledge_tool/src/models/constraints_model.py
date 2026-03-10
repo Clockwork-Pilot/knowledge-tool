@@ -111,22 +111,23 @@ class Constraint(BaseModel):
         return self
 
 
-class Constraints(RenderableModel):
-    """Root document for project-level features."""
+class FeaturesScope(RenderableModel):
+    """Root document for project-level features with a defined scope."""
 
-    type: Literal["Constraints"] = "Constraints"
+    type: Literal["FeaturesScope"] = "FeaturesScope"
+    scope: str = Field(..., description="Scope of this features collection (e.g., 'local', 'global', 'integration')")
     features: Optional[Dict[str, "Feature"]] = Field(None, description="Features indexed by feature ID")
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Metadata (created_at, updated_at, etc.)"
     )
 
     @classmethod
-    def create_default(cls) -> "Constraints":
-        """Create a default Constraints instance."""
-        return cls()
+    def create_default(cls) -> "FeaturesScope":
+        """Create a default FeaturesScope instance."""
+        return cls(scope="local")
 
     def render(self, include_toc: bool = True) -> str:
-        """Render Constraints to markdown string.
+        """Render FeaturesScope to markdown string.
 
         Args:
             include_toc: Whether to include TOC in rendering (default: True).
@@ -195,7 +196,7 @@ class Constraints(RenderableModel):
         return "\n".join(lines).strip()
 
     def render_toc(self) -> list:
-        """Generate table of contents for constraints document.
+        """Generate table of contents for FeaturesScope document.
 
         Returns:
             List of TOC lines with feature links.
@@ -213,9 +214,9 @@ class Constraints(RenderableModel):
         return toc_lines
 
     def is_can_be_root(self) -> bool:
-        """Constraints can be created as a root document.
+        """FeaturesScope can be created as a root document.
 
         Returns:
-            True - Constraints can be root documents.
+            True - FeaturesScope can be root documents.
         """
         return True
