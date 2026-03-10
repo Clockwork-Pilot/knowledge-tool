@@ -8,8 +8,10 @@ from pydantic import BaseModel, Field
 # Support both package imports (.) and direct imports (models)
 try:
     from . import RenderableModel, Doc, Opts
+    from .feature_model import Feature
 except ImportError:
     from models import RenderableModel, Doc, Opts
+    from feature_model import Feature
 
 
 class CodeStats(BaseModel):
@@ -162,6 +164,7 @@ class Task(RenderableModel):
     iterations: Optional[Dict[str, Iteration]] = Field(
         None, description="Iterations indexed by iteration ID"
     )
+    features: Optional[Dict[str, Feature]] = Field(None, description="Features indexed by feature ID")
     opts: Optional[Opts] = Field(None, description="Task rendering options (render_toc, render_priority)")
 
     @classmethod
