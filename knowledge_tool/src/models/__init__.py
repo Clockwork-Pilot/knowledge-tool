@@ -3,14 +3,12 @@
 from .base_model import RenderableModel
 from .doc_model import Doc, Opts
 from .feature_model import Feature
+from .results_model import ConstraintBashResult, ConstraintPromptResult, FeatureResult, Tests
 from .constraints_model import (
     Constraints,
     ConstraintBash,
     ConstraintPrompt,
-    ConstraintBashResult,
-    ConstraintPromptResult,
     Constraint,
-    Tests,
 )
 from .task_model import Task, Iteration, CodeStats, TaskTestMetrics
 
@@ -36,6 +34,7 @@ __all__ = [
     "ConstraintPrompt",
     "ConstraintBashResult",
     "ConstraintPromptResult",
+    "FeatureResult",
     "Constraint",
     "Tests",
     "Task",

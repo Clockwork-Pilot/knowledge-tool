@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Feature, Constraints, and Test models for constraint validation and result tracking."""
+"""Feature, Constraints, and Test models for constraint validation."""
 
 import re
 from datetime import datetime
@@ -9,8 +9,10 @@ from pydantic import BaseModel, Field, model_validator
 # Support both package imports (.) and direct imports (models)
 try:
     from . import RenderableModel
+    from .results_model import ConstraintBashResult, ConstraintPromptResult, Tests
 except ImportError:
     from models import RenderableModel
+    from results_model import ConstraintBashResult, ConstraintPromptResult, Tests
 
 
 class ConstraintBash(BaseModel):
@@ -21,7 +23,7 @@ class ConstraintBash(BaseModel):
     description: str = Field(..., description="Description of the constraint")
     scope: str = Field(default="local", description="Scope of the constraint (local, global, etc.)")
 
-    def create_result(self, verdict: bool, output: str) -> "ConstraintBashResult":
+    def create_result(self, verdict: bool, output: str) -> ConstraintBashResult:
         """Create result from bash execution.
 
         Args:
@@ -70,7 +72,7 @@ class ConstraintPrompt(BaseModel):
             self._compiled_regex = re.compile(self.verdict_expect_rule)
         return self._compiled_regex
 
-    def create_result(self) -> "ConstraintPromptResult":
+    def create_result(self) -> ConstraintPromptResult:
         """Create empty result for prompt constraint.
 
         No LLM execution happens in the model layer. Returns placeholder
@@ -87,24 +89,6 @@ class ConstraintPrompt(BaseModel):
             short_answer="",
             timestamp=datetime.now()
         )
-
-
-class ConstraintBashResult(BaseModel):
-    """Result of executing a bash constraint."""
-
-    constraint_id: str = Field(..., description="ID of the constraint that was executed")
-    verdict: bool = Field(..., description="Whether the constraint passed (True) or failed (False)")
-    shrunken_output: str = Field(..., description="Truncated stdout/stderr output")
-    timestamp: Optional[datetime] = Field(None, description="When the constraint was executed")
-
-
-class ConstraintPromptResult(BaseModel):
-    """Result of executing a prompt constraint."""
-
-    constraint_id: str = Field(..., description="ID of the constraint that was executed")
-    verdict: str = Field(..., description="LLM's verdict (to be matched against verdict_expect_rule)")
-    short_answer: str = Field(..., description="LLM's short answer/reasoning")
-    timestamp: Optional[datetime] = Field(None, description="When the constraint was executed")
 
 
 class Constraint(BaseModel):
@@ -128,11 +112,10 @@ class Constraint(BaseModel):
 
 
 class Constraints(RenderableModel):
-    """Root document for project-level features and constraints."""
+    """Root document for project-level features."""
 
     type: Literal["Constraints"] = "Constraints"
     features: Optional[Dict[str, "Feature"]] = Field(None, description="Features indexed by feature ID")
-    constraints: Optional[Dict[str, Constraint]] = Field(None, description="Constraints indexed by constraint ID (bash or prompt)")
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Metadata (created_at, updated_at, etc.)"
     )
@@ -201,41 +184,6 @@ class Constraints(RenderableModel):
 
                 lines.append("")
 
-        # Render constraints (standalone, not embedded in features)
-        if self.constraints:
-            lines.append("## Standalone Constraints")
-            lines.append("")
-
-            bash_constraints = {}
-            prompt_constraints = {}
-
-            for constraint_id, constraint in self.constraints.items():
-                if constraint.constraint_bash:
-                    bash_constraints[constraint_id] = constraint
-                elif constraint.constraint_prompt:
-                    prompt_constraints[constraint_id] = constraint
-
-            if bash_constraints:
-                lines.append("### Bash Constraints")
-                lines.append("")
-                for constraint_id, constraint in bash_constraints.items():
-                    bash = constraint.constraint_bash
-                    lines.append(f"#### {constraint_id}: {bash.description}")
-                    lines.append(f"**Scope:** {bash.scope}")
-                    lines.append(f"**Command:** `{bash.cmd}`")
-                    lines.append("")
-
-            if prompt_constraints:
-                lines.append("### Prompt Constraints")
-                lines.append("")
-                for constraint_id, constraint in prompt_constraints.items():
-                    prompt = constraint.constraint_prompt
-                    lines.append(f"#### {constraint_id}: {prompt.description}")
-                    lines.append(f"**Scope:** {prompt.scope}")
-                    lines.append(f"**Prompt:** {prompt.prompt}")
-                    lines.append(f"**Expected Verdict Pattern:** `{prompt.verdict_expect_rule}`")
-                    lines.append("")
-
         # Render metadata
         if self.metadata:
             lines.append("## Metadata")
@@ -250,7 +198,7 @@ class Constraints(RenderableModel):
         """Generate table of contents for constraints document.
 
         Returns:
-            List of TOC lines with feature and constraint links.
+            List of TOC lines with feature links.
         """
         toc_lines = []
 
@@ -258,9 +206,6 @@ class Constraints(RenderableModel):
             toc_lines.append("- [Features](#features)")
             for feature_id in self.features.keys():
                 toc_lines.append(f"  - [{feature_id}](#{feature_id})")
-
-        if self.constraints:
-            toc_lines.append("- [Standalone Constraints](#standalone-constraints)")
 
         if self.metadata:
             toc_lines.append("- [Metadata](#metadata)")
@@ -272,109 +217,5 @@ class Constraints(RenderableModel):
 
         Returns:
             True - Constraints can be root documents.
-        """
-        return True
-
-
-class Tests(RenderableModel):
-    """Root document for constraint execution results."""
-
-    type: Literal["Tests"] = "Tests"
-    constraints_results: Optional[Dict[str, Union[ConstraintBashResult, ConstraintPromptResult]]] = Field(
-        None, description="Constraint execution results indexed by constraint ID"
-    )
-
-    @classmethod
-    def create_default(cls) -> "Tests":
-        """Create a default Tests instance."""
-        return cls()
-
-    def render(self, include_toc: bool = True) -> str:
-        """Render Tests to markdown string.
-
-        Args:
-            include_toc: Whether to include TOC in rendering (default: True).
-
-        Returns:
-            Formatted markdown string representation.
-        """
-        lines = []
-
-        if include_toc:
-            toc = self.render_toc()
-            if toc:
-                lines.append("## Table of Contents")
-                lines.append("")
-                lines.extend(toc)
-                lines.append("")
-
-        # Organize results by type
-        if self.constraints_results:
-            bash_results = {}
-            prompt_results = {}
-
-            for constraint_id, result in self.constraints_results.items():
-                if isinstance(result, ConstraintBashResult):
-                    bash_results[constraint_id] = result
-                elif isinstance(result, ConstraintPromptResult):
-                    prompt_results[constraint_id] = result
-
-            if bash_results or prompt_results:
-                lines.append("## Constraint Results")
-                lines.append("")
-
-            if bash_results:
-                lines.append("### Bash Constraints")
-                lines.append("")
-                for constraint_id, result in bash_results.items():
-                    verdict_str = "✓ PASS" if result.verdict else "✗ FAIL"
-                    lines.append(f"#### {constraint_id}")
-                    lines.append(f"**Verdict:** {verdict_str}")
-                    if result.timestamp:
-                        lines.append(f"**Timestamp:** {result.timestamp.isoformat()}")
-                    if result.shrunken_output:
-                        lines.append(f"**Output:** `{result.shrunken_output}`")
-                    lines.append("")
-
-            if prompt_results:
-                lines.append("### Prompt Constraints")
-                lines.append("")
-                for constraint_id, result in prompt_results.items():
-                    lines.append(f"#### {constraint_id}")
-                    lines.append(f"**Verdict:** {result.verdict or '(empty)'}")
-                    if result.short_answer:
-                        lines.append(f"**Answer:** {result.short_answer}")
-                    if result.timestamp:
-                        lines.append(f"**Timestamp:** {result.timestamp.isoformat()}")
-                    lines.append("")
-
-        return "\n".join(lines).strip()
-
-    def render_toc(self) -> list:
-        """Generate table of contents for constraint results.
-
-        Returns:
-            List of TOC lines with result links.
-        """
-        toc_lines = []
-
-        if self.constraints_results:
-            bash_results = sum(1 for r in self.constraints_results.values() if isinstance(r, ConstraintBashResult))
-            prompt_results = sum(1 for r in self.constraints_results.values() if isinstance(r, ConstraintPromptResult))
-
-            if bash_results or prompt_results:
-                toc_lines.append("- [Constraint Results](#constraint-results)")
-                if bash_results:
-                    toc_lines.append("  - [Bash Constraints](#bash-constraints)")
-                if prompt_results:
-                    toc_lines.append("  - [Prompt Constraints](#prompt-constraints)")
-
-        return toc_lines
-
-    def is_can_be_root(self) -> bool:
-        """Tests can be created as a root document.
-
-        Returns:
-            True - Tests can be root documents.
         """
         return True

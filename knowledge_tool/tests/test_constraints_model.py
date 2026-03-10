@@ -9,7 +9,7 @@ import pytest
 from models import (
     Feature, Constraints, Task, MODEL_REGISTRY,
     ConstraintBash, ConstraintPrompt, ConstraintBashResult, ConstraintPromptResult,
-    Constraint, Tests
+    Constraint, Tests, FeatureResult
 )
 
 
@@ -374,6 +374,68 @@ class TestConstraintPromptResultModel:
         assert result.timestamp == now
 
 
+class TestFeatureResultModel:
+    """Test FeatureResult model for grouping constraint results by feature."""
+
+    def test_feature_result_creation(self):
+        """Test creating FeatureResult instance."""
+        result = ConstraintBashResult(
+            constraint_id="c1",
+            verdict=True,
+            shrunken_output="ok"
+        )
+
+        feature_result = FeatureResult(
+            feature_id="f1",
+            constraints_results={"c1": result}
+        )
+
+        assert feature_result.feature_id == "f1"
+        assert len(feature_result.constraints_results) == 1
+        assert feature_result.constraints_results["c1"].verdict is True
+
+    def test_feature_result_with_multiple_constraints(self):
+        """Test FeatureResult with multiple constraint results."""
+        bash_result = ConstraintBashResult(
+            constraint_id="c1",
+            verdict=True,
+            shrunken_output="ok"
+        )
+        prompt_result = ConstraintPromptResult(
+            constraint_id="p1",
+            verdict="pass",
+            short_answer="Passed"
+        )
+
+        feature_result = FeatureResult(
+            feature_id="feature1",
+            constraints_results={"c1": bash_result, "p1": prompt_result}
+        )
+
+        assert feature_result.feature_id == "feature1"
+        assert len(feature_result.constraints_results) == 2
+        assert isinstance(feature_result.constraints_results["c1"], ConstraintBashResult)
+        assert isinstance(feature_result.constraints_results["p1"], ConstraintPromptResult)
+
+    def test_feature_result_serialization(self):
+        """Test FeatureResult serialization to JSON."""
+        result = ConstraintBashResult(
+            constraint_id="c1",
+            verdict=False,
+            shrunken_output="failed"
+        )
+
+        feature_result = FeatureResult(
+            feature_id="f1",
+            constraints_results={"c1": result}
+        )
+
+        data = feature_result.model_dump()
+        assert data["feature_id"] == "f1"
+        assert "c1" in data["constraints_results"]
+        assert data["constraints_results"]["c1"]["verdict"] is False
+
+
 class TestConstraintModel:
     """Test Constraint wrapper model."""
 
@@ -441,7 +503,7 @@ class TestTestsModel:
         tests = Tests()
 
         assert tests.type == "Tests"
-        assert tests.constraints_results is None
+        assert tests.features_results is None
 
     def test_tests_with_bash_tests(self):
         """Test Tests with bash constraint results."""
@@ -456,12 +518,16 @@ class TestTestsModel:
             shrunken_output="failed"
         )
 
-        tests = Tests(
+        feature_result = FeatureResult(
+            feature_id="f1",
             constraints_results={"c1": result1, "c2": result2}
         )
+        tests = Tests(
+            features_results={"f1": feature_result}
+        )
 
-        assert len(tests.constraints_results) == 2
-        assert tests.constraints_results["c1"].verdict is True
+        assert len(tests.features_results) == 1
+        assert tests.features_results["f1"].constraints_results["c1"].verdict is True
 
     def test_tests_with_prompt_tests(self):
         """Test Tests with prompt constraint results."""
@@ -471,11 +537,15 @@ class TestTestsModel:
             short_answer="Passed"
         )
 
-        tests = Tests(
+        feature_result = FeatureResult(
+            feature_id="f1",
             constraints_results={"p1": result}
         )
+        tests = Tests(
+            features_results={"f1": feature_result}
+        )
 
-        assert tests.constraints_results["p1"].verdict == "success"
+        assert tests.features_results["f1"].constraints_results["p1"].verdict == "success"
 
     def test_tests_is_root(self):
         """Test Tests can be a root document."""
@@ -486,36 +556,46 @@ class TestTestsModel:
         """Test Tests.create_default()."""
         tests = Tests.create_default()
         assert tests.type == "Tests"
-        assert tests.constraints_results is None
+        assert tests.features_results is None
 
     def test_tests_render(self):
         """Test Tests markdown rendering."""
         result1 = ConstraintBashResult(constraint_id="c1", verdict=True, shrunken_output="ok")
         result2 = ConstraintPromptResult(constraint_id="p1", verdict="pass", short_answer="Yes")
 
-        tests = Tests(
+        feature_result = FeatureResult(
+            feature_id="f1",
             constraints_results={"c1": result1, "p1": result2}
+        )
+        tests = Tests(
+            features_results={"f1": feature_result}
         )
 
         markdown = tests.render()
 
         assert "## Constraint Results" in markdown
-        assert "### Bash Constraints" in markdown
-        assert "### Prompt Constraints" in markdown
+        assert "### Feature: f1" in markdown
+        assert "**Bash Constraints:**" in markdown
+        assert "**Prompt Constraints:**" in markdown
         assert "✓ PASS" in markdown
-        assert "c1" in markdown
-        assert "p1" in markdown
+        assert "f1.c1" in markdown
+        assert "f1.p1" in markdown
 
     def test_tests_render_toc(self):
         """Test Tests table of contents rendering."""
         result = ConstraintBashResult(constraint_id="c1", verdict=True, shrunken_output="ok")
 
-        tests = Tests(
+        feature_result = FeatureResult(
+            feature_id="f1",
             constraints_results={"c1": result}
+        )
+        tests = Tests(
+            features_results={"f1": feature_result}
         )
 
         toc = tests.render_toc()
 
         assert len(toc) > 0
         assert any("Constraint Results" in line for line in toc)
-        assert any("Bash Constraints" in line for line in toc)
+        assert any("Feature: f1" in line for line in toc)
+        assert any("c1" in line for line in toc)
