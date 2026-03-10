@@ -9,10 +9,10 @@ from pydantic import BaseModel, Field, model_validator
 # Support both package imports (.) and direct imports (models)
 try:
     from . import RenderableModel
-    from .results_model import ConstraintBashResult, ConstraintPromptResult, Tests
+    from .results_model import ConstraintBashResult, ConstraintPromptResult, ChecksResults
 except ImportError:
     from models import RenderableModel
-    from results_model import ConstraintBashResult, ConstraintPromptResult, Tests
+    from results_model import ConstraintBashResult, ConstraintPromptResult, ChecksResults
 
 
 class ConstraintBash(BaseModel):

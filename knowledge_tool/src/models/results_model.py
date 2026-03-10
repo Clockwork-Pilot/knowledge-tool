@@ -39,21 +39,21 @@ class FeatureResult(BaseModel):
     )
 
 
-class Tests(RenderableModel):
+class ChecksResults(RenderableModel):
     """Root document for constraint execution results."""
 
-    type: Literal["Tests"] = "Tests"
+    type: Literal["ChecksResults"] = "ChecksResults"
     features_results: Optional[Dict[str, FeatureResult]] = Field(
         None, description="Feature results indexed by feature ID"
     )
 
     @classmethod
-    def create_default(cls) -> "Tests":
-        """Create a default Tests instance."""
+    def create_default(cls) -> "ChecksResults":
+        """Create a default ChecksResults instance."""
         return cls()
 
     def render(self, include_toc: bool = True) -> str:
-        """Render Tests to markdown string.
+        """Render ChecksResults to markdown string.
 
         Args:
             include_toc: Whether to include TOC in rendering (default: True).
@@ -171,9 +171,9 @@ class Tests(RenderableModel):
         return toc_lines
 
     def is_can_be_root(self) -> bool:
-        """Tests can be created as a root document.
+        """ChecksResults can be created as a root document.
 
         Returns:
-            True - Tests can be root documents.
+            True - ChecksResults can be root documents.
         """
         return True

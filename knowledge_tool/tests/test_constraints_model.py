@@ -9,7 +9,7 @@ import pytest
 from models import (
     Feature, FeaturesScope, Task, MODEL_REGISTRY,
     ConstraintBash, ConstraintPrompt, ConstraintBashResult, ConstraintPromptResult,
-    Constraint, Tests, FeatureResult
+    Constraint, ChecksResults, FeatureResult
 )
 
 
@@ -208,14 +208,14 @@ class TestModelRegistry:
 
     def test_all_root_models_registered(self):
         """Test all expected models are in registry."""
-        expected = ["Doc", "FeaturesScope", "Task", "Iteration", "Tests"]
+        expected = ["Doc", "FeaturesScope", "Task", "Iteration", "ChecksResults"]
         for model_name in expected:
             assert model_name in MODEL_REGISTRY, f"{model_name} not in MODEL_REGISTRY"
 
-    def test_tests_in_registry(self):
-        """Test that Tests is registered."""
-        assert "Tests" in MODEL_REGISTRY
-        assert MODEL_REGISTRY["Tests"] is Tests
+    def test_test_results_in_registry(self):
+        """Test that ChecksResults is registered."""
+        assert "ChecksResults" in MODEL_REGISTRY
+        assert MODEL_REGISTRY["ChecksResults"] is ChecksResults
 
 
 class TestConstraintBashModel:
@@ -500,18 +500,18 @@ class TestConstraintModel:
             Constraint(id="const1", scope="local")
 
 
-class TestTestsModel:
-    """Test Tests root document model."""
+class TestChecksResultsModel:
+    """Test ChecksResults root document model."""
 
-    def test_tests_creation(self):
-        """Test creating Tests instance."""
-        tests = Tests()
+    def test_test_results_creation(self):
+        """Test creating ChecksResults instance."""
+        test_results = ChecksResults()
 
-        assert tests.type == "Tests"
-        assert tests.features_results is None
+        assert test_results.type == "ChecksResults"
+        assert test_results.features_results is None
 
-    def test_tests_with_bash_tests(self):
-        """Test Tests with bash constraint results."""
+    def test_test_results_with_bash_results(self):
+        """Test ChecksResults with bash constraint results."""
         result1 = ConstraintBashResult(
             constraint_id="c1",
             verdict=True,
@@ -527,15 +527,15 @@ class TestTestsModel:
             feature_id="f1",
             constraints_results={"c1": result1, "c2": result2}
         )
-        tests = Tests(
+        test_results = ChecksResults(
             features_results={"f1": feature_result}
         )
 
-        assert len(tests.features_results) == 1
-        assert tests.features_results["f1"].constraints_results["c1"].verdict is True
+        assert len(test_results.features_results) == 1
+        assert test_results.features_results["f1"].constraints_results["c1"].verdict is True
 
-    def test_tests_with_prompt_tests(self):
-        """Test Tests with prompt constraint results."""
+    def test_test_results_with_prompt_results(self):
+        """Test ChecksResults with prompt constraint results."""
         result = ConstraintPromptResult(
             constraint_id="p1",
             verdict="success",
@@ -546,25 +546,25 @@ class TestTestsModel:
             feature_id="f1",
             constraints_results={"p1": result}
         )
-        tests = Tests(
+        test_results = ChecksResults(
             features_results={"f1": feature_result}
         )
 
-        assert tests.features_results["f1"].constraints_results["p1"].verdict == "success"
+        assert test_results.features_results["f1"].constraints_results["p1"].verdict == "success"
 
-    def test_tests_is_root(self):
-        """Test Tests can be a root document."""
-        tests = Tests()
-        assert tests.is_can_be_root() is True
+    def test_test_results_is_root(self):
+        """Test ChecksResults can be a root document."""
+        test_results = ChecksResults()
+        assert test_results.is_can_be_root() is True
 
-    def test_tests_create_default(self):
-        """Test Tests.create_default()."""
-        tests = Tests.create_default()
-        assert tests.type == "Tests"
-        assert tests.features_results is None
+    def test_test_results_create_default(self):
+        """Test ChecksResults.create_default()."""
+        test_results = ChecksResults.create_default()
+        assert test_results.type == "ChecksResults"
+        assert test_results.features_results is None
 
-    def test_tests_render(self):
-        """Test Tests markdown rendering."""
+    def test_test_results_render(self):
+        """Test ChecksResults markdown rendering."""
         result1 = ConstraintBashResult(constraint_id="c1", verdict=True, shrunken_output="ok")
         result2 = ConstraintPromptResult(constraint_id="p1", verdict="pass", short_answer="Yes")
 
@@ -572,11 +572,11 @@ class TestTestsModel:
             feature_id="f1",
             constraints_results={"c1": result1, "p1": result2}
         )
-        tests = Tests(
+        test_results = ChecksResults(
             features_results={"f1": feature_result}
         )
 
-        markdown = tests.render()
+        markdown = test_results.render()
 
         assert "## Constraint Results" in markdown
         assert "### Feature: f1" in markdown
@@ -586,19 +586,19 @@ class TestTestsModel:
         assert "f1.c1" in markdown
         assert "f1.p1" in markdown
 
-    def test_tests_render_toc(self):
-        """Test Tests table of contents rendering."""
+    def test_test_results_render_toc(self):
+        """Test ChecksResults table of contents rendering."""
         result = ConstraintBashResult(constraint_id="c1", verdict=True, shrunken_output="ok")
 
         feature_result = FeatureResult(
             feature_id="f1",
             constraints_results={"c1": result}
         )
-        tests = Tests(
+        test_results = ChecksResults(
             features_results={"f1": feature_result}
         )
 
-        toc = tests.render_toc()
+        toc = test_results.render_toc()
 
         assert len(toc) > 0
         assert any("Constraint Results" in line for line in toc)

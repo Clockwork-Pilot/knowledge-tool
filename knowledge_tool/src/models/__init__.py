@@ -3,7 +3,7 @@
 from .base_model import RenderableModel
 from .doc_model import Doc, Opts
 from .feature_model import Feature
-from .results_model import ConstraintBashResult, ConstraintPromptResult, FeatureResult, Tests
+from .results_model import ConstraintBashResult, ConstraintPromptResult, FeatureResult, ChecksResults
 from .constraints_model import (
     FeaturesScope,
     ConstraintBash,
@@ -19,7 +19,7 @@ MODEL_REGISTRY = {
     "Doc": Doc,
     "Feature": Feature,
     "FeaturesScope": FeaturesScope,
-    "Tests": Tests,
+    "ChecksResults": ChecksResults,
     "Task": Task,
     "Iteration": Iteration,
 }
@@ -36,7 +36,7 @@ __all__ = [
     "ConstraintPromptResult",
     "FeatureResult",
     "Constraint",
-    "Tests",
+    "ChecksResults",
     "Task",
     "Iteration",
     "CodeStats",
