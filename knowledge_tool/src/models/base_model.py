@@ -2,7 +2,7 @@
 """Base model for all renderable model types."""
 
 from abc import ABC, abstractmethod
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RenderableModel(BaseModel, ABC):
@@ -13,6 +13,7 @@ class RenderableModel(BaseModel, ABC):
     """
 
     type: str  # Subclasses override with Literal["ModelType"]
+    model_version: int = Field(..., description="Model schema version for data migrations")
 
     @abstractmethod
     def render(self, include_toc: bool = True) -> str:

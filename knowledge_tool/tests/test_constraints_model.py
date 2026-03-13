@@ -156,16 +156,17 @@ class TestFeaturesScopeModel:
 class TestTaskWithFeatures:
     """Test Task model with features field."""
 
-    def test_task_has_features_field(self):
-        """Test that Task model includes features field."""
+    def test_task_has_spec_field(self):
+        """Test that Task model includes spec field."""
         task = Task.create_default()
 
-        assert hasattr(task, "features")
-        assert task.features is None
+        assert hasattr(task, "spec")
+        assert task.spec is not None
+        assert task.spec.version == 1
 
-    def test_task_with_features(self):
-        """Test Task with features populated."""
-        from models import Doc
+    def test_task_with_spec_features(self):
+        """Test Task with spec that contains features."""
+        from models import Doc, Spec
 
         feature = Feature(
             id="g1",
@@ -173,29 +174,35 @@ class TestTaskWithFeatures:
             constraint="test command"
         )
 
-        plan = Doc(id="plan", label="Plan")
-        task = Task(
-            id="task1",
-            plan=plan,
+        description = Doc(id="description", label="Specification")
+        spec = Spec(
+            version=1,
+            description=description,
             features={"g1": feature}
         )
+        task = Task(
+            id="task1",
+            spec=spec
+        )
 
-        assert task.features is not None
-        assert len(task.features) == 1
-        assert task.features["g1"].description == "Complete task objective"
+        assert task.spec is not None
+        assert task.spec.features is not None
+        assert len(task.spec.features) == 1
+        assert task.spec.features["g1"].description == "Complete task objective"
 
-    def test_task_serialization_with_features(self):
-        """Test Task serializes with features."""
-        from models import Doc
+    def test_task_serialization_with_spec(self):
+        """Test Task serializes with spec."""
+        from models import Doc, Spec
 
         feature = Feature(id="g1", description="Feature", constraint="cmd")
-        plan = Doc(id="plan", label="Plan")
-        task = Task(id="task1", plan=plan, features={"g1": feature})
+        description = Doc(id="description", label="Specification")
+        spec = Spec(version=1, description=description, features={"g1": feature})
+        task = Task(id="task1", spec=spec)
 
         data = task.model_dump()
 
-        assert "features" in data
-        assert data["features"]["g1"]["id"] == "g1"
+        assert "spec" in data
+        assert data["spec"]["features"]["g1"]["id"] == "g1"
 
 
 class TestModelRegistry:

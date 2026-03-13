@@ -43,6 +43,7 @@ class ChecksResults(RenderableModel):
     """Root document for constraint execution results."""
 
     type: Literal["ChecksResults"] = "ChecksResults"
+    model_version: int = 1
     features_results: Optional[Dict[str, FeatureResult]] = Field(
         None, description="Feature results indexed by feature ID"
     )
@@ -50,7 +51,7 @@ class ChecksResults(RenderableModel):
     @classmethod
     def create_default(cls) -> "ChecksResults":
         """Create a default ChecksResults instance."""
-        return cls()
+        return cls(features_results=None)
 
     def render(self, include_toc: bool = True) -> str:
         """Render ChecksResults to markdown string.

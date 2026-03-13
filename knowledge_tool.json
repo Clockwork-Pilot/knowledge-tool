@@ -431,7 +431,52 @@
           "id": "usage_examples",
           "label": "Usage Examples",
           "description": "# Create or patch a document\nfrom apply_json_patch import apply_json_patch\n\n# Patch existing document\nerror = apply_json_patch('doc.json', '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"new\"}]')\nif error:\n    print(f\"Error: {error.error}\")\nelse:\n    print(\"Success\")\n\n# Create new document by providing patch for non-existent file\nerror = apply_json_patch('new_doc.json', '[{\"op\": \"add\", \"path\": \"/id\", \"value\": \"doc1\"}]')\n\n# Re-render existing document without patching\nerror = apply_json_patch('doc.json', None)",
-          "metadata": {}
+          "metadata": {},
+          "children": {
+            "hello_world_example": {
+              "type": "Doc",
+              "id": "hello_world_example",
+              "label": "Hello World Example",
+              "description": "Complete JSON payload showing typical document structure with table of contents rendering enabled and 2 nested children",
+              "metadata": {
+                "json_payload": {
+                  "type": "Doc",
+                  "id": "hello_world",
+                  "label": "Hello World Guide",
+                  "description": "A simple getting started guide with TOC rendering enabled",
+                  "metadata": {
+                    "version": "1.0",
+                    "author": "Developer"
+                  },
+                  "opts": {
+                    "render_priority": false,
+                    "render_toc": true
+                  },
+                  "children": {
+                    "introduction": {
+                      "type": "Doc",
+                      "id": "introduction",
+                      "label": "Introduction",
+                      "description": "Getting started with the basics",
+                      "metadata": {
+                        "section": "overview"
+                      }
+                    },
+                    "setup": {
+                      "type": "Doc",
+                      "id": "setup",
+                      "label": "Setup Instructions",
+                      "description": "Step-by-step setup guide for beginners",
+                      "metadata": {
+                        "section": "installation",
+                        "difficulty": "beginner"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         "from_other_projects": {
           "type": "Doc",

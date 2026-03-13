@@ -115,6 +115,7 @@ class FeaturesScope(RenderableModel):
     """Root document for project-level features with a defined scope."""
 
     type: Literal["FeaturesScope"] = "FeaturesScope"
+    model_version: int = 1
     scope: str = Field(..., description="Scope of this features collection (e.g., 'local', 'global', 'integration')")
     features: Optional[Dict[str, "Feature"]] = Field(None, description="Features indexed by feature ID")
     metadata: Dict[str, Any] = Field(
@@ -124,7 +125,7 @@ class FeaturesScope(RenderableModel):
     @classmethod
     def create_default(cls) -> "FeaturesScope":
         """Create a default FeaturesScope instance."""
-        return cls(scope="local")
+        return cls(scope="local", features=None)
 
     def render(self, include_toc: bool = True) -> str:
         """Render FeaturesScope to markdown string.

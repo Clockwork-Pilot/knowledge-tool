@@ -20,9 +20,10 @@ class Opts(BaseModel):
 class Doc(RenderableModel):
     """Document node with type-based extensibility and optional children."""
 
+    type: Literal["Doc"] = "Doc"
+    model_version: int = 1
     id: str
     label: str
-    type: Literal["Doc"] = "Doc"
     description: Optional[str] = None
     metadata: Dict[str, Any] = {}
     opts: Optional[Opts] = None
@@ -77,21 +78,26 @@ class Doc(RenderableModel):
         - Metadata field keys (rendered as sections)
         - Child nodes (rendered as nested headings)
 
+        Handles duplicate headings by tracking seen anchors and generating unique IDs.
+
         Returns:
             List of TOC lines with proper indentation and anchors.
         """
         doc_dict = json.loads(self.model_dump_json(exclude_none=True))
         toc_lines = []
+        seen_anchors = {}  # Track anchors to detect duplicates
 
         # Add TOC entries for metadata fields
         metadata = doc_dict.get("metadata", {})
         if metadata:
             for key in metadata.keys():
                 formatted_key = Doc._format_key(key)
-                # Generate anchor from formatted key: lowercase, spaces→hyphens
-                anchor = formatted_key.lower().replace(" ", "-")
+                # Generate anchor from formatted key
+                anchor = Doc._generate_anchor(formatted_key)
+                # Make unique if duplicate
+                unique_anchor = Doc._make_unique_anchor(anchor, seen_anchors)
 
-                toc_lines.append(f"- [{formatted_key}](#{anchor})")
+                toc_lines.append(f"- [{formatted_key}](#{unique_anchor})")
 
         # Add TOC entries for children
         children = doc_dict.get("children", {})
@@ -99,15 +105,15 @@ class Doc(RenderableModel):
             sorted_children = Doc._sort_children_by_priority(children)
             for child_id, child_node in sorted_children:
                 label = child_node.get("label", child_id)
-                # Generate anchor matching standard markdown
-                anchor = label.lower()
-                anchor = anchor.replace(' ', '-')
-                anchor = re.sub(r'[^\w-]', '', anchor)
+                # Generate anchor using standard method
+                anchor = Doc._generate_anchor(label)
+                # Make unique if duplicate
+                unique_anchor = Doc._make_unique_anchor(anchor, seen_anchors)
 
-                toc_lines.append(f"- [{label}](#{anchor})")
+                toc_lines.append(f"- [{label}](#{unique_anchor})")
 
                 # Recursively add child's TOC (its metadata and children)
-                child_toc = Doc._generate_toc(child_node, level=2)
+                child_toc = Doc._generate_toc(child_node, level=2, seen_anchors=seen_anchors)
                 if child_toc:
                     for line in child_toc:
                         toc_lines.append("  " + line)
@@ -125,7 +131,9 @@ class Doc(RenderableModel):
         """
         # Add heading for this node
         label = node.get("label", "Untitled")
-        heading = "#" * level + " " + label
+        # Strip leading emoji to ensure consistent anchor generation
+        label_for_heading = re.sub(r'^[^\x00-\x7F]+\s*', '', label)
+        heading = "#" * level + " " + label_for_heading
         lines.append(heading)
 
         # Add description if present (right after heading)
@@ -160,17 +168,23 @@ class Doc(RenderableModel):
                     Doc._render_node(child_node, lines, level=level + 1)
 
     @staticmethod
-    def _generate_toc(node: Dict[str, Any], level: int = 1, parent_label: str = "") -> list:
+    def _generate_toc(node: Dict[str, Any], level: int = 1, parent_label: str = "", seen_anchors: Optional[Dict[str, int]] = None) -> list:
         """Generate table of contents lines from document structure.
+
+        Handles duplicate headings by tracking seen anchors and generating unique IDs.
 
         Args:
             node: Doc node dictionary
             level: Current heading level (1-6)
             parent_label: Label of parent node for context
+            seen_anchors: Dictionary tracking anchor usage for deduplication
 
         Returns:
             List of TOC lines
         """
+        if seen_anchors is None:
+            seen_anchors = {}
+
         toc_lines = []
 
         children = node.get("children", {})
@@ -179,16 +193,16 @@ class Doc(RenderableModel):
 
             for child_id, child_node in sorted_children:
                 label = child_node.get("label", child_id)
-                # Generate anchor matching standard markdown: lowercase, spaces→hyphens, remove other special chars
-                anchor = label.lower()
-                anchor = anchor.replace(' ', '-')  # Convert spaces to hyphens first
-                anchor = re.sub(r'[^\w-]', '', anchor)  # Then remove other special chars
+                # Generate anchor using standard method
+                anchor = Doc._generate_anchor(label)
+                # Make unique if duplicate
+                unique_anchor = Doc._make_unique_anchor(anchor, seen_anchors)
 
                 indent = "  " * (level - 1)
-                toc_lines.append(f"{indent}- [{label}](#{anchor})")
+                toc_lines.append(f"{indent}- [{label}](#{unique_anchor})")
 
                 # Recursively add child's children
-                child_toc = Doc._generate_toc(child_node, level + 1, label)
+                child_toc = Doc._generate_toc(child_node, level + 1, label, seen_anchors)
                 toc_lines.extend(child_toc)
 
         return toc_lines
@@ -286,6 +300,51 @@ class Doc(RenderableModel):
             Formatted key
         """
         return key.replace("_", " ").title()
+
+    @staticmethod
+    def _make_unique_anchor(anchor: str, seen_anchors: Dict[str, int]) -> str:
+        """Make anchor unique by appending counter if duplicate.
+
+        Args:
+            anchor: The anchor slug to make unique
+            seen_anchors: Dictionary tracking how many times each anchor has been seen
+
+        Returns:
+            Unique anchor (original if first occurrence, with -2, -3, etc. if duplicate)
+        """
+        if anchor not in seen_anchors:
+            seen_anchors[anchor] = 1
+            return anchor
+        else:
+            seen_anchors[anchor] += 1
+            return f"{anchor}-{seen_anchors[anchor]}"
+
+    @staticmethod
+    def _generate_anchor(text: str) -> str:
+        """Generate markdown-compatible anchor from heading text.
+
+        Converts text to lowercase, replaces spaces with hyphens,
+        keeps dots but removes other special characters.
+
+        Args:
+            text: Heading text (e.g., "apply_json_patch.py" or "apply_json_patch()")
+
+        Returns:
+            Markdown anchor slug (e.g., "apply_json_patchpy" or "apply_json_patch")
+        """
+        # Convert to lowercase
+        anchor = text.lower()
+        # Replace spaces with hyphens
+        anchor = anchor.replace(' ', '-')
+        # Remove parentheses and other special chars, but keep hyphens
+        anchor = re.sub(r'[^\w\-.]', '', anchor)
+        # Remove dots for standard markdown compatibility
+        anchor = anchor.replace('.', '')
+        # Clean up multiple consecutive hyphens
+        anchor = re.sub(r'-+', '-', anchor)
+        # Remove leading/trailing hyphens
+        anchor = anchor.strip('-')
+        return anchor
 
     def is_can_be_root(self) -> bool:
         """Doc can be created as a root document.

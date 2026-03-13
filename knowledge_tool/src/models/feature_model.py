@@ -21,6 +21,7 @@ class Feature(RenderableModel):
     """
 
     type: Literal["Feature"] = "Feature"
+    model_version: int = 1
     id: str = Field(..., description="Unique feature identifier")
     description: str = Field(..., description="Feature description")
     constraints: Optional[Dict[str, Union[ConstraintBash, ConstraintPrompt]]] = Field(
@@ -33,7 +34,7 @@ class Feature(RenderableModel):
     @classmethod
     def create_default(cls) -> "Feature":
         """Create a default Feature instance."""
-        return cls(id="feature_1", description="New feature")
+        return cls(id="feature_1", description="New feature", constraints=None)
 
     def render(self, include_toc: bool = True) -> str:
         """Render Feature to markdown string.

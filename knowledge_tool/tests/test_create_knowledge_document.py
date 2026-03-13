@@ -30,14 +30,14 @@ class TestCreateKnowledgeDocument:
             assert doc_path.exists()
 
     def test_create_task_document(self):
-        """Creating Task document with plan succeeds."""
+        """Creating Task document with spec succeeds."""
         with tempfile.TemporaryDirectory() as tmpdir:
             task_path = Path(tmpdir) / "test_task.json"
             result = create_knowledge_document("Task", str(task_path))
             assert result == 0
             with open(task_path) as f:
                 data = json.load(f)
-            assert data["plan"]["type"] == "Doc"
+            assert data["spec"]["type"] == "Spec"
 
     def test_cannot_create_iteration_as_root(self):
         """Iteration cannot be created as root document."""

@@ -7,11 +7,13 @@ from pydantic import BaseModel, Field
 
 # Support both package imports (.) and direct imports (models)
 try:
-    from . import RenderableModel, Doc, Opts
-    from .feature_model import Feature
+    from .base_model import RenderableModel
+    from .doc_model import Doc, Opts
+    from .spec_model import Spec
 except ImportError:
-    from models import RenderableModel, Doc, Opts
-    from feature_model import Feature
+    from base_model import RenderableModel
+    from doc_model import Doc, Opts
+    from spec_model import Spec
 
 
 class CodeStats(BaseModel):
@@ -39,8 +41,9 @@ class TaskTestMetrics(BaseModel):
 class Iteration(RenderableModel):
     """Represents a single iteration of a task with metrics."""
 
-    id: str = Field(..., description="Unique iteration identifier")
     type: Literal["Iteration"] = "Iteration"
+    model_version: int = 1
+    id: str = Field(..., description="Unique iteration identifier")
     children: Optional[Dict[str, Doc]] = Field(None, description="Child documents for iteration sections")
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Iteration metadata (created_at, updated_at, etc.)"
@@ -54,7 +57,14 @@ class Iteration(RenderableModel):
     @classmethod
     def create_default(cls) -> "Iteration":
         """Create a default Iteration instance."""
-        return cls(id=f"{cls.__name__.lower()}_1")
+        return cls(
+            id=f"{cls.__name__.lower()}_1",
+            children=None,
+            code_stats=None,
+            tests_stats=None,
+            coverage_stats_by_tests=None,
+            metadata={}
+        )
 
     def render(self, include_toc: bool = True) -> str:
         """Render Iteration to markdown string.
@@ -156,22 +166,32 @@ class Iteration(RenderableModel):
 
 
 class Task(RenderableModel):
-    """Represents a task with plan and iterations."""
+    """Represents a task with specification and iterations."""
 
-    id: str = Field(..., description="Unique task identifier")
     type: Literal["Task"] = "Task"
-    plan: Doc = Field(..., description="Task plan as a Doc with metadata (created_at, updated_at)")
+    model_version: int = 2
+    id: str = Field(..., description="Unique task identifier")
+    status: Literal["planning", "executing", "failed", "succeed"] = Field(
+        "planning", description="Task status: planning|executing|failed|succeed"
+    )
+    spec: Spec = Field(..., description="Specification defining task features and their constraints")
     iterations: Optional[Dict[str, Iteration]] = Field(
         None, description="Iterations indexed by iteration ID"
     )
-    features: Optional[Dict[str, Feature]] = Field(None, description="Features indexed by feature ID")
     opts: Optional[Opts] = Field(None, description="Task rendering options (render_toc, render_priority)")
 
     @classmethod
     def create_default(cls) -> "Task":
-        """Create a default Task instance with required plan."""
-        plan = Doc(id="plan", label="Plan")
-        return cls(id=f"{cls.__name__.lower()}_1", plan=plan)
+        """Create a default Task instance with required spec."""
+        description = Doc(id="description", label="Specification Description", metadata={})
+        spec = Spec(version=1, description=description)
+        return cls(
+            id=f"{cls.__name__.lower()}_1",
+            spec=spec,
+            status="planning",
+            iterations=None,
+            opts=None
+        )
 
     def render(self, include_toc: bool = True) -> str:
         """Render Task to markdown string.
@@ -196,11 +216,11 @@ class Task(RenderableModel):
                 lines.extend(toc_lines)
                 lines.append("")
 
-        # Render plan section (without its own TOC, since Task has comprehensive TOC)
-        lines.append("## Plan")
+        # Render specification section (without its own TOC, since Task has comprehensive TOC)
+        lines.append(f"## Specification (v{self.spec.version})")
         lines.append("")
-        plan_markdown = self.plan.render(include_toc=False)
-        lines.append(plan_markdown)
+        spec_markdown = self.spec.description.render(include_toc=False)
+        lines.append(spec_markdown)
         lines.append("")
 
         # Render iterations section
@@ -221,19 +241,20 @@ class Task(RenderableModel):
         """Generate table of contents for the task.
 
         Returns:
-            List of TOC lines including Plan and Iterations sections.
+            List of TOC lines including Specification and Iterations sections.
         """
         import re
         toc_lines = []
 
-        # Add Plan section
-        toc_lines.append("- [Plan](#plan)")
+        # Add Specification section
+        spec_anchor = f"specification-v{self.spec.version}".lower()
+        toc_lines.append(f"- [Specification (v{self.spec.version})](#{spec_anchor})")
 
-        # Generate TOC for Plan if the Doc has render_toc enabled
-        if self.plan.opts and self.plan.opts.render_toc:
-            plan_toc = self.plan.render_toc()
-            # Indent plan's TOC under Plan
-            for toc_line in plan_toc:
+        # Generate TOC for Specification if the Doc has render_toc enabled
+        if self.spec.description.opts and self.spec.description.opts.render_toc:
+            spec_toc = self.spec.description.render_toc()
+            # Indent spec's TOC under Specification
+            for toc_line in spec_toc:
                 toc_lines.append("  " + toc_line)
 
         # Add Iterations section if there are iterations
@@ -308,24 +329,25 @@ class Task(RenderableModel):
         return toc_lines
 
     def render_toc(self) -> list:
-        """Generate TOC for Task structure with Plan and Iterations sections.
+        """Generate TOC for Task structure with Specification and Iterations sections.
 
         Includes:
-        - Plan entry with nested TOC from plan.render_toc() if plan.opts.render_toc=true
-        - Iterations entry with iteration entries and their nested TOCs if summary.opts.render_toc=true
+        - Specification entry with nested TOC from spec.description.render_toc() if spec.description.opts.render_toc=true
+        - Iterations entry with iteration entries and their nested TOCs if iteration.opts.render_toc=true
 
         Returns:
             List of TOC lines with proper indentation and anchors.
         """
         toc_lines = []
 
-        # Plan entry
-        toc_lines.append("- [Plan](#plan)")
-        if self.plan and self.plan.opts and self.plan.opts.render_toc:
-            plan_toc = self.plan.render_toc()
-            if plan_toc:
-                # Indent plan's TOC entries
-                for line in plan_toc:
+        # Specification entry
+        spec_anchor = f"specification-v{self.spec.version}".lower()
+        toc_lines.append(f"- [Specification (v{self.spec.version})](#{spec_anchor})")
+        if self.spec.description and self.spec.description.opts and self.spec.description.opts.render_toc:
+            spec_toc = self.spec.description.render_toc()
+            if spec_toc:
+                # Indent spec's TOC entries
+                for line in spec_toc:
                     toc_lines.append("  " + line)
 
         # Iterations entry (if iterations exist)

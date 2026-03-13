@@ -11,6 +11,7 @@ from .constraints_model import (
     Constraint,
 )
 from .task_model import Task, Iteration, CodeStats, TaskTestMetrics
+from .spec_model import Spec
 
 # Registry mapping model type string to model class.
 # Add all RenderableModel subclasses that can be root nodes in knowledge documents.
@@ -22,6 +23,7 @@ MODEL_REGISTRY = {
     "ChecksResults": ChecksResults,
     "Task": Task,
     "Iteration": Iteration,
+    "Spec": Spec,
 }
 
 __all__ = [
@@ -41,6 +43,7 @@ __all__ = [
     "Iteration",
     "CodeStats",
     "TaskTestMetrics",
+    "Spec",
     "MODEL_REGISTRY",
 ]
 

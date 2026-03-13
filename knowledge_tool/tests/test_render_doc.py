@@ -213,39 +213,43 @@ class TestTaskRender:
 
     def test_task_render_without_toc(self):
         """Test rendering a Task without TOC."""
-        from models import Task, Opts
+        from models import Task, Opts, Spec
 
-        plan = Doc(
-            id="plan",
-            label="Plan",
-            description="Task plan"
+        description = Doc(
+            id="description",
+            label="Specification",
+            description="Task specification"
         )
+
+        spec = Spec(version=1, description=description)
 
         task = Task(
             id="task_1",
-            plan=plan,
+            spec=spec,
             opts=Opts(render_toc=False)
         )
 
         rendered = task.render()
 
         assert "# Task: task_1" in rendered
-        assert "## Plan" in rendered
+        assert "## Specification" in rendered
         assert "## Table of Contents" not in rendered
 
     def test_task_render_with_toc_no_iterations(self):
         """Test rendering a Task with TOC but no iterations."""
-        from models import Task, Opts
+        from models import Task, Opts, Spec
 
-        plan = Doc(
-            id="plan",
-            label="Plan",
-            description="Task plan"
+        description = Doc(
+            id="description",
+            label="Specification",
+            description="Task specification"
         )
+
+        spec = Spec(version=1, description=description)
 
         task = Task(
             id="task_1",
-            plan=plan,
+            spec=spec,
             opts=Opts(render_toc=True)
         )
 
@@ -253,26 +257,28 @@ class TestTaskRender:
 
         assert "# Task: task_1" in rendered
         assert "## Table of Contents" in rendered
-        assert "- [Plan](#plan)" in rendered
+        assert "- [Specification" in rendered
         # No Iterations section should be in TOC
         assert "[Iterations]" not in rendered
 
     def test_task_render_with_toc_with_iterations(self):
         """Test rendering a Task with TOC and iterations."""
-        from models import Task, Iteration, Opts
+        from models import Task, Iteration, Opts, Spec
 
-        plan = Doc(
-            id="plan",
-            label="Plan",
-            description="Task plan"
+        description = Doc(
+            id="description",
+            label="Specification",
+            description="Task specification"
         )
+
+        spec = Spec(version=1, description=description)
 
         iteration1 = Iteration(id="iteration_1")
         iteration2 = Iteration(id="iteration_2")
 
         task = Task(
             id="task_1",
-            plan=plan,
+            spec=spec,
             iterations={
                 "iteration_1": iteration1,
                 "iteration_2": iteration2,
@@ -284,82 +290,88 @@ class TestTaskRender:
 
         assert "# Task: task_1" in rendered
         assert "## Table of Contents" in rendered
-        assert "- [Plan](#plan)" in rendered
+        assert "- [Specification" in rendered
         assert "- [Iterations](#iterations)" in rendered
         assert "- [iteration_1](#iteration_1)" in rendered
         assert "- [iteration_2](#iteration_2)" in rendered
 
-    def test_task_render_with_plan_toc(self):
-        """Test Task TOC includes Plan's nested TOC when plan.opts.render_toc is enabled."""
-        from models import Task, Opts
+    def test_task_render_with_spec_toc(self):
+        """Test Task TOC includes Spec's description nested TOC when description.opts.render_toc is enabled."""
+        from models import Task, Opts, Spec
 
-        plan_child = Doc(
+        spec_child = Doc(
             id="section1",
             label="Section 1",
             description="First section"
         )
 
-        plan = Doc(
-            id="plan",
-            label="Plan",
-            description="Task plan",
-            children={"section1": plan_child},
+        description = Doc(
+            id="description",
+            label="Specification",
+            description="Task specification",
+            children={"section1": spec_child},
             opts=Opts(render_toc=True)
         )
 
+        spec = Spec(version=1, description=description)
+
         task = Task(
             id="task_1",
-            plan=plan,
+            spec=spec,
             opts=Opts(render_toc=True)
         )
 
         rendered = task.render()
 
         assert "## Table of Contents" in rendered
-        assert "- [Plan](#plan)" in rendered
-        # Plan's children TOC should be indented under Plan
+        assert "- [Specification" in rendered
+        # Spec's children TOC should be indented under Specification
         assert "  - [Section 1](#section-1)" in rendered
 
-    def test_task_render_without_plan_toc(self):
-        """Test Task TOC does not include Plan's nested TOC when plan.opts.render_toc is not enabled."""
-        from models import Task, Opts
+    def test_task_render_without_spec_toc(self):
+        """Test Task TOC does not include Spec's description nested TOC when description.opts.render_toc is not enabled."""
+        from models import Task, Opts, Spec
 
-        plan_child = Doc(
+        spec_child = Doc(
             id="section1",
             label="Section 1",
             description="First section"
         )
 
-        plan = Doc(
-            id="plan",
-            label="Plan",
-            description="Task plan",
-            children={"section1": plan_child},
+        description = Doc(
+            id="description",
+            label="Specification",
+            description="Task specification",
+            children={"section1": spec_child},
             opts=Opts(render_toc=False)
         )
 
+        spec = Spec(version=1, description=description)
+
         task = Task(
             id="task_1",
-            plan=plan,
+            spec=spec,
             opts=Opts(render_toc=True)
         )
 
         rendered = task.render()
 
         assert "## Table of Contents" in rendered
-        assert "- [Plan](#plan)" in rendered
-        # Plan's children TOC should NOT be included
+        assert "- [Specification" in rendered
+        # Spec's children TOC should NOT be included
         assert "  - [Section 1]" not in rendered
 
     def test_task_render_with_iteration_children_toc(self):
         """Test Task TOC includes iteration children TOC when children have render_toc enabled."""
-        from models import Task, Iteration, Opts
+        from models import Task, Iteration, Opts, Spec
 
-        plan = Doc(
-            id="plan",
-            label="Plan",
-            description="Task plan"
+        description = Doc(
+            id="description",
+            label="Specification",
+            description="Task specification"
         )
+
+        spec = Spec(version=1, description=description)
 
         # Child with metadata so it generates TOC entries
         child_section = Doc(
@@ -377,7 +389,7 @@ class TestTaskRender:
 
         task = Task(
             id="task_1",
-            plan=plan,
+            spec=spec,
             iterations={"iteration_1": iteration1},
             opts=Opts(render_toc=True)
         )

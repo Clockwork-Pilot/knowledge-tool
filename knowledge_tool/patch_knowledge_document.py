@@ -159,10 +159,19 @@ def apply_json_patch(
 
 
 def _error_json_patch_syntax(error: str, operation: str) -> ApplyPatchErrorResponse:
-    """Return error for JSON Patch syntax errors with example."""
+    """Return error for JSON Patch syntax errors with example and document schema."""
+    schema = Doc.model_json_schema()
+    schema_str = json.dumps(schema, indent=2)
+
+    hint = (
+        "JSON Patch must be valid JSON array of RFC 6902 operations.\n\n"
+        "Document schema:\n"
+        f"{schema_str}"
+    )
+
     return ApplyPatchErrorResponse(
         error=f"Invalid JSON Patch syntax: {error}",
-        hint="JSON Patch must be valid JSON array of operations",
+        hint=hint,
         example=[
             {
                 "op": "add",

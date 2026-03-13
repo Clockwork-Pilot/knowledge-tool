@@ -22,6 +22,7 @@ def temp_custom_doc():
     """Create temporary test document for testing."""
     doc = {
         "type": "TestModel",
+        "model_version": 1,
         "id": "test1",
         "title": "Test Document",
         "description": "A test document",

@@ -19,6 +19,7 @@ class TestModel(RenderableModel):
     __test__ = False  # Prevent pytest from trying to collect this as a test class
 
     type: Literal["TestModel"] = "TestModel"
+    model_version: int = 1
     id: str = Field(..., description="Unique identifier")
     title: str = Field(..., description="Title")
     description: Optional[str] = Field(None, description="Description")

@@ -140,6 +140,21 @@ class TestJsonPatchSyntaxError:
         assert error.example is not None
         assert len(error.example) > 0
 
+    def test_invalid_json_includes_schema(self, temp_doc):
+        """Test that invalid JSON error includes document schema in hint."""
+        patch = "not valid json"
+
+        error = apply_json_patch(temp_doc, patch)
+
+        assert error is not None
+        assert error.hint is not None
+        # Schema should be included in hint
+        assert "properties" in error.hint
+        assert "id" in error.hint  # Required field in Doc schema
+        assert "label" in error.hint  # Required field in Doc schema
+        assert "type" in error.hint  # Type field in Doc schema
+        assert "children" in error.hint  # Children field in Doc schema
+
     def test_not_array(self, temp_doc):
         """Test patch that's not an array."""
         patch = json.dumps({"op": "add", "path": "/label", "value": "test"})
