@@ -23,6 +23,31 @@ class ConstraintBash(BaseModel):
     description: str = Field(..., description="Description of the constraint")
     scope: str = Field(default="local", description="Scope of the constraint (local, global, etc.)")
 
+    def render(self, include_toc: bool = True) -> str:
+        """Render constraint to markdown string.
+
+        Args:
+            include_toc: Whether to include TOC (not used for constraints)
+
+        Returns:
+            Formatted markdown string representation.
+        """
+        lines = []
+        lines.append(f"#### {self.id}")
+        lines.append(f"**Description:** {self.description}")
+        lines.append(f"**Type:** Bash")
+        lines.append(f"**Command:** `{self.cmd}`")
+        lines.append(f"**Scope:** {self.scope}")
+        return "\n".join(lines)
+
+    def render_toc(self) -> list:
+        """Generate TOC entry for this constraint.
+
+        Returns:
+            List with single TOC entry for the constraint.
+        """
+        return [f"- [{self.id}](#{self.id.lower().replace('_', '-')})"]
+
     def create_result(self, verdict: bool, output: str) -> ConstraintBashResult:
         """Create result from bash execution.
 
@@ -71,6 +96,32 @@ class ConstraintPrompt(BaseModel):
         if self._compiled_regex is None:
             self._compiled_regex = re.compile(self.verdict_expect_rule)
         return self._compiled_regex
+
+    def render(self, include_toc: bool = True) -> str:
+        """Render constraint to markdown string.
+
+        Args:
+            include_toc: Whether to include TOC (not used for constraints)
+
+        Returns:
+            Formatted markdown string representation.
+        """
+        lines = []
+        lines.append(f"#### {self.id}")
+        lines.append(f"**Description:** {self.description}")
+        lines.append(f"**Type:** Prompt")
+        lines.append(f"**Prompt:** {self.prompt}")
+        lines.append(f"**Expected Verdict Pattern:** `{self.verdict_expect_rule}`")
+        lines.append(f"**Scope:** {self.scope}")
+        return "\n".join(lines)
+
+    def render_toc(self) -> list:
+        """Generate TOC entry for this constraint.
+
+        Returns:
+            List with single TOC entry for the constraint.
+        """
+        return [f"- [{self.id}](#{self.id.lower().replace('_', '-')})"]
 
     def create_result(self) -> ConstraintPromptResult:
         """Create empty result for prompt constraint.

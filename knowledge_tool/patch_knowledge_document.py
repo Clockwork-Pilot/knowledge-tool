@@ -101,6 +101,21 @@ def apply_json_patch(
         except Exception as e:
             return _error_path_not_found(str(e), doc_dict, operation)
 
+        # 4b. Validate Task status transitions (lock status in executing state)
+        if document_path.endswith('task.json'):
+            old_status = doc_dict.get('status')
+            new_status = patched_dict.get('status')
+
+            if old_status and new_status and old_status != new_status:
+                # Once in executing/failed/succeed state, status is locked - no changes allowed
+                locked_statuses = {"executing", "failed", "succeed"}
+                if old_status in locked_statuses:
+                    return ApplyPatchErrorResponse(
+                        error=f"Status is locked in '{old_status}' state. Manual status changes are not allowed.",
+                        hint="Task status transitions should only be made by execution process, not manually changed.",
+                        operation=operation
+                    )
+
     # 5. Validate against correct model type
     try:
         model_type = patched_dict.get("type", "Doc")

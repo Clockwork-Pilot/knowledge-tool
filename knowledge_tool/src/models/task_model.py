@@ -2,8 +2,9 @@
 """Task and Iteration models for knowledge-based task management."""
 
 import json
+import re
 from typing import Any, Dict, Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # Support both package imports (.) and direct imports (models)
 try:
@@ -193,6 +194,20 @@ class Task(RenderableModel):
             opts=None
         )
 
+    @model_validator(mode='after')
+    def set_default_render_toc(self) -> 'Task':
+        """Set render_toc=True by default if opts is not specified.
+
+        When loading a Task from snapshot (JSON), if opts is not provided,
+        create default opts with render_toc=True for better UX.
+        If opts exists and render_toc is explicitly False, keep it False.
+        """
+        if self.opts is None:
+            # opts not specified in snapshot: create new Opts with render_toc=True
+            self.opts = Opts(render_toc=True, render_priority=False)
+        # If opts is specified, use its render_toc value as-is
+        return self
+
     def render(self, include_toc: bool = True) -> str:
         """Render Task to markdown string.
 
@@ -208,7 +223,8 @@ class Task(RenderableModel):
         lines.append("")
 
         # Insert TOC if applicable
-        if include_toc and self.opts and self.opts.render_toc:
+        # opts is guaranteed to exist after validator runs, render_toc defaults to True
+        if include_toc and self.opts.render_toc:
             toc_lines = self._generate_toc()
             if toc_lines:
                 lines.append("## Table of Contents")
@@ -222,6 +238,48 @@ class Task(RenderableModel):
         spec_markdown = self.spec.description.render(include_toc=False)
         lines.append(spec_markdown)
         lines.append("")
+
+        # Render features section
+        if self.spec.features:
+            lines.append("## Features")
+            lines.append("")
+            # Sort features by ID for consistent rendering
+            sorted_features = sorted(self.spec.features.items())
+            for feature_id, feature in sorted_features:
+                # Render feature heading at level 3 (under ## Features)
+                lines.append(f"### {feature.id}")
+                lines.append(f"**{feature.description}**")
+                lines.append("")
+
+                # Render goals if present
+                if feature.goals:
+                    lines.append("**Goals:**")
+                    for goal in feature.goals:
+                        lines.append(f"- {goal}")
+                    lines.append("")
+
+                # Render constraints directly at level 4, without section headers
+                if feature.constraints:
+                    for constraint_id, constraint in sorted(feature.constraints.items()):
+                        # Render constraint heading at level 4 (under ### feature)
+                        lines.append(f"#### {constraint.id}")
+                        lines.append(f"**Description:** {constraint.description}")
+
+                        # Render constraint-specific details
+                        if hasattr(constraint, 'cmd'):  # ConstraintBash
+                            lines.append(f"**Command:** `{constraint.cmd}`")
+                        elif hasattr(constraint, 'prompt'):  # ConstraintPrompt
+                            lines.append(f"**Prompt:** {constraint.prompt}")
+                            lines.append(f"**Expected Verdict:** `{constraint.verdict_expect_rule}`")
+
+                        lines.append("")
+
+                # Render metadata if present
+                if feature.metadata:
+                    lines.append("**Metadata:**")
+                    for key, value in feature.metadata.items():
+                        lines.append(f"- {key}: {value}")
+                    lines.append("")
 
         # Render iterations section
         if self.iterations:
@@ -237,8 +295,67 @@ class Task(RenderableModel):
 
         return "\n".join(lines).strip()
 
+    @staticmethod
+    def _adjust_heading_levels(markdown: str, shift: int = 2) -> str:
+        """Adjust all markdown heading levels by prepending # symbols.
+
+        This shifts feature headings from # to ### while preserving relative hierarchy.
+        So # becomes ###, ## becomes ####, etc.
+
+        Args:
+            markdown: Markdown text with headings
+            shift: Number of levels to shift (default 2, so # becomes ###)
+
+        Returns:
+            Markdown with adjusted heading levels
+        """
+        lines = markdown.split('\n')
+        adjusted_lines = []
+
+        for line in lines:
+            # Check if line starts with markdown heading syntax
+            if line.startswith('#') and not line.startswith(' '):
+                # Count existing hashes
+                hash_count = len(line) - len(line.lstrip('#'))
+                # Prepend shift amount of new hashes
+                new_heading = '#' * shift + line
+                adjusted_lines.append(new_heading)
+            else:
+                adjusted_lines.append(line)
+
+        return '\n'.join(adjusted_lines)
+
+    @staticmethod
+    def _generate_anchor(text: str) -> str:
+        """Generate markdown anchor from heading text.
+
+        Converts heading text to a valid markdown anchor by:
+        - Converting to lowercase
+        - Replacing spaces with hyphens
+        - Removing special characters except hyphens and underscores
+
+        Args:
+            text: Heading text to generate anchor for
+
+        Returns:
+            Markdown anchor string (without # prefix)
+        """
+        # Lowercase
+        anchor = text.lower()
+        # Replace spaces with hyphens (underscores preserved, matching markdown renderers)
+        anchor = anchor.replace(' ', '-')
+        # Remove special characters (keep only word chars and hyphens)
+        anchor = re.sub(r'[^\w-]', '', anchor)
+        # Remove multiple consecutive hyphens
+        anchor = re.sub(r'-+', '-', anchor)
+        # Strip leading/trailing hyphens
+        anchor = anchor.strip('-')
+        return anchor
+
     def _generate_toc(self) -> list:
         """Generate table of contents for the task.
+
+        Uses 4-space indentation increments (standard for VS Code markdown preview).
 
         Returns:
             List of TOC lines including Specification and Iterations sections.
@@ -253,9 +370,25 @@ class Task(RenderableModel):
         # Generate TOC for Specification if the Doc has render_toc enabled
         if self.spec.description.opts and self.spec.description.opts.render_toc:
             spec_toc = self.spec.description.render_toc()
-            # Indent spec's TOC under Specification
+            # Indent spec's TOC under Specification with 4-space indentation
             for toc_line in spec_toc:
-                toc_lines.append("  " + toc_line)
+                toc_lines.append("    " + toc_line)
+
+        # Add Features section if there are features
+        if self.spec.features:
+            toc_lines.append("- [Features](#features)")
+            for feature_id in sorted(self.spec.features.keys()):
+                feature = self.spec.features[feature_id]
+                # Feature anchor: generated from ID only (markdown naturally does this)
+                feature_anchor = self._generate_anchor(feature_id)
+                toc_lines.append(f"    - [{feature_id}](#{feature_anchor})")
+
+                # Add constraints for this feature (nested deeper with 6-space indentation)
+                if feature.constraints:
+                    for constraint_id in sorted(feature.constraints.keys()):
+                        # Constraint anchor: generated from ID only
+                        constraint_anchor = self._generate_anchor(constraint_id)
+                        toc_lines.append(f"      - [{constraint_id}](#{constraint_anchor})")
 
         # Add Iterations section if there are iterations
         if self.iterations:
@@ -272,13 +405,13 @@ class Task(RenderableModel):
                 # Generate anchor matching standard markdown: lowercase, spaces→hyphens
                 anchor = iter_id_field.lower().replace(' ', '-')
 
-                toc_lines.append(f"  - [{iter_id_field}](#{anchor})")
+                toc_lines.append(f"    - [{iter_id_field}](#{anchor})")
 
-                # Add iteration's children TOC if available
+                # Add iteration's children TOC if available (6-space indent)
                 iteration_toc = iteration.render_toc()
                 if iteration_toc:
                     for toc_line in iteration_toc:
-                        toc_lines.append("    " + toc_line)
+                        toc_lines.append("      " + toc_line)
 
         return toc_lines
 
@@ -331,6 +464,8 @@ class Task(RenderableModel):
     def render_toc(self) -> list:
         """Generate TOC for Task structure with Specification and Iterations sections.
 
+        Uses 4-space indentation increments (standard for VS Code markdown preview).
+
         Includes:
         - Specification entry with nested TOC from spec.description.render_toc() if spec.description.opts.render_toc=true
         - Iterations entry with iteration entries and their nested TOCs if iteration.opts.render_toc=true
@@ -346,9 +481,25 @@ class Task(RenderableModel):
         if self.spec.description and self.spec.description.opts and self.spec.description.opts.render_toc:
             spec_toc = self.spec.description.render_toc()
             if spec_toc:
-                # Indent spec's TOC entries
+                # Indent spec's TOC entries with 4-space indentation
                 for line in spec_toc:
-                    toc_lines.append("  " + line)
+                    toc_lines.append("    " + line)
+
+        # Features entry (if features exist)
+        if self.spec.features:
+            toc_lines.append("- [Features](#features)")
+            for feature_id in sorted(self.spec.features.keys()):
+                feature = self.spec.features[feature_id]
+                # Feature anchor: generated from ID only (markdown naturally does this)
+                feature_anchor = self._generate_anchor(feature_id)
+                toc_lines.append(f"    - [{feature_id}](#{feature_anchor})")
+
+                # Add constraints for this feature (nested deeper with 6-space indent)
+                if feature.constraints:
+                    for constraint_id in sorted(feature.constraints.keys()):
+                        # Constraint anchor: generated from ID only
+                        constraint_anchor = self._generate_anchor(constraint_id)
+                        toc_lines.append(f"      - [{constraint_id}](#{constraint_anchor})")
 
         # Iterations entry (if iterations exist)
         if self.iterations:
@@ -364,13 +515,13 @@ class Task(RenderableModel):
                 iter_id = iteration.id
                 # Create anchor matching standard markdown: lowercase, spaces→hyphens only
                 anchor = iter_id.lower().replace(" ", "-")
-                toc_lines.append(f"  - [{iter_id}](#{anchor})")
+                toc_lines.append(f"    - [{iter_id}](#{anchor})")
 
-                # Add nested TOC from iteration's children if any have render_toc=true
+                # Add nested TOC from iteration's children if any have render_toc=true (6-space indent)
                 iteration_toc = iteration.render_toc()
                 if iteration_toc:
                     for line in iteration_toc:
-                        toc_lines.append("    " + line)
+                        toc_lines.append("      " + line)
 
         return toc_lines
 
