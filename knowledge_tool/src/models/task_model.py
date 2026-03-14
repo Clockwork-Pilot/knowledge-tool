@@ -11,10 +11,12 @@ try:
     from .base_model import RenderableModel
     from .doc_model import Doc, Opts
     from .spec_model import Spec
+    from .results_model import FeaturesStats
 except ImportError:
     from base_model import RenderableModel
     from doc_model import Doc, Opts
     from spec_model import Spec
+    from results_model import FeaturesStats
 
 
 class CodeStats(BaseModel):
@@ -54,6 +56,9 @@ class Iteration(RenderableModel):
     coverage_stats_by_tests: Optional[Dict[str, int]] = Field(
         None, description="Coverage metrics per test (test_name -> lines_covered)"
     )
+    features_stats: Optional[FeaturesStats] = Field(
+        None, description="Feature constraint validation statistics (which features passed/failed)"
+    )
 
     @classmethod
     def create_default(cls) -> "Iteration":
@@ -64,6 +69,7 @@ class Iteration(RenderableModel):
             code_stats=None,
             tests_stats=None,
             coverage_stats_by_tests=None,
+            features_stats=None,
             metadata={}
         )
 
@@ -124,6 +130,41 @@ class Iteration(RenderableModel):
             for test_name, coverage in self.coverage_stats_by_tests.items():
                 lines.append(f"- {test_name}: {coverage} lines")
             lines.append("")
+
+        # Render features stats
+        if self.features_stats:
+            lines.append("**Feature Constraint Validation Stats:**")
+            lines.append("")
+
+            # Count passing and failing features
+            passing_count = sum(1 for v in self.features_stats.features_checks.values() if v)
+            failing_count = sum(1 for v in self.features_stats.features_checks.values() if not v)
+            total_count = len(self.features_stats.features_checks)
+
+            # Overall summary
+            lines.append(f"- **Overall:** {passing_count}/{total_count} features passed")
+            if failing_count > 0:
+                lines.append(f"- **Failed:** {failing_count} features with constraint violations")
+            lines.append("")
+
+            # List all features
+            lines.append("**Feature Status:**")
+            for feature_id, passed in sorted(self.features_stats.features_checks.items()):
+                status = "✓ PASS" if passed else "✗ FAIL"
+                lines.append(f"- {feature_id}: {status}")
+            lines.append("")
+
+            # Detail failed features if any
+            if self.features_stats.failed:
+                lines.append("**Failed Feature Details:**")
+                lines.append("")
+                for feature_id, feature_result in sorted(self.features_stats.failed.items()):
+                    lines.append(f"**{feature_id}:**")
+                    if feature_result.constraints_results:
+                        for constraint_id, result in sorted(feature_result.constraints_results.items()):
+                            if hasattr(result, 'verdict') and not result.verdict:
+                                lines.append(f"- {constraint_id}: FAILED")
+                    lines.append("")
 
         return "\n".join(lines).strip()
 

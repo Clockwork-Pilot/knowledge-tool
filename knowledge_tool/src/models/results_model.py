@@ -34,8 +34,21 @@ class FeatureResult(BaseModel):
     """Constraint execution results for a feature."""
 
     feature_id: str = Field(..., description="ID of the feature")
-    constraints_results: Optional[Dict[str, Union[ConstraintBashResult, ConstraintPromptResult]]] = Field(
-        None, description="Constraint execution results indexed by constraint ID"
+    constraints_results: Dict[str, Union[ConstraintBashResult, ConstraintPromptResult]] = Field(
+        ..., description="Constraint execution results indexed by constraint ID (required)"
+    )
+
+
+class FeaturesStats(BaseModel):
+    """Statistics tracking feature constraint validation results for an iteration."""
+
+    features_checks: Dict[str, bool] = Field(
+        ...,
+        description="Complete list of all task features with pass/fail status (True=all constraints pass, False=any constraint failed)"
+    )
+    failed: Dict[str, FeatureResult] = Field(
+        default_factory=dict,
+        description="Only failed features with their FeatureResult details (features containing failed constraints)"
     )
 
 
