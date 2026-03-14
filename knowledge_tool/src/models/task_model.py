@@ -11,12 +11,12 @@ try:
     from .base_model import RenderableModel
     from .doc_model import Doc, Opts
     from .spec_model import Spec
-    from .results_model import FeaturesStats
+    from .results_model import FeaturesStats, FeaturesStatsDiff
 except ImportError:
     from base_model import RenderableModel
     from doc_model import Doc, Opts
     from spec_model import Spec
-    from results_model import FeaturesStats
+    from results_model import FeaturesStats, FeaturesStatsDiff
 
 
 class CodeStats(BaseModel):
@@ -59,6 +59,9 @@ class Iteration(RenderableModel):
     features_stats: Optional[FeaturesStats] = Field(
         None, description="Feature constraint validation statistics (which features passed/failed)"
     )
+    features_stats_diff: Optional[FeaturesStatsDiff] = Field(
+        None, description="Changes in feature validation results compared to previous iteration"
+    )
 
     @classmethod
     def create_default(cls) -> "Iteration":
@@ -70,6 +73,7 @@ class Iteration(RenderableModel):
             tests_stats=None,
             coverage_stats_by_tests=None,
             features_stats=None,
+            features_stats_diff=None,
             metadata={}
         )
 

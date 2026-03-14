@@ -3,7 +3,7 @@
 from .base_model import RenderableModel
 from .doc_model import Doc, Opts
 from .feature_model import Feature
-from .results_model import ConstraintBashResult, ConstraintPromptResult, FeatureResult, ChecksResults, FeaturesStats
+from .results_model import ConstraintBashResult, ConstraintPromptResult, FeatureResult, ChecksResults, FeaturesStats, FeaturesStatsDiff
 from .constraints_model import (
     FeaturesScope,
     ConstraintBash,
@@ -38,6 +38,7 @@ __all__ = [
     "ConstraintPromptResult",
     "FeatureResult",
     "FeaturesStats",
+    "FeaturesStatsDiff",
     "Constraint",
     "ChecksResults",
     "Task",

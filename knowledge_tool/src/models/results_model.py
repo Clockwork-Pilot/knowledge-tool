@@ -51,6 +51,65 @@ class FeaturesStats(BaseModel):
         description="Only failed features with their FeatureResult details (features containing failed constraints)"
     )
 
+    def diff(self, previous: Optional["FeaturesStats"]) -> "FeaturesStatsDiff":
+        """Calculate difference between this and previous features stats.
+
+        Tracks which features improved (fail->pass) or regressed (pass->fail),
+        and which are still failing.
+
+        Args:
+            previous: Previous iteration's FeaturesStats (None if first iteration)
+
+        Returns:
+            FeaturesStatsDiff with improved, regressed, and still_failing features
+        """
+        if previous is None:
+            # First iteration - all currently failing are new failures
+            return FeaturesStatsDiff(
+                improved={},
+                regressed={},
+                still_failing=set(self.failed.keys())
+            )
+
+        improved = {}
+        regressed = {}
+
+        # Check for improvements: was failing, now passing
+        for feature_id in previous.failed.keys():
+            if feature_id in self.features_checks and self.features_checks[feature_id]:
+                improved[feature_id] = True
+
+        # Check for regressions: was passing, now failing
+        for feature_id, was_passing in previous.features_checks.items():
+            if was_passing and feature_id in self.features_checks and not self.features_checks[feature_id]:
+                regressed[feature_id] = True
+
+        # Still failing: in current failed dict and was in previous failed
+        still_failing = set(self.failed.keys()).intersection(set(previous.failed.keys()))
+
+        return FeaturesStatsDiff(
+            improved=improved,
+            regressed=regressed,
+            still_failing=still_failing
+        )
+
+
+class FeaturesStatsDiff(BaseModel):
+    """Tracks changes in feature constraint validation between iterations."""
+
+    improved: Dict[str, bool] = Field(
+        default_factory=dict,
+        description="Features that improved (fail->pass since previous iteration)"
+    )
+    regressed: Dict[str, bool] = Field(
+        default_factory=dict,
+        description="Features that regressed (pass->fail since previous iteration)"
+    )
+    still_failing: set[str] = Field(
+        default_factory=set,
+        description="Features still failing from previous iteration"
+    )
+
 
 class ChecksResults(RenderableModel):
     """Root document for constraint execution results."""
