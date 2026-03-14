@@ -247,7 +247,7 @@ class Task(RenderableModel):
             sorted_features = sorted(self.spec.features.items())
             for feature_id, feature in sorted_features:
                 # Render feature heading at level 3 (under ## Features)
-                lines.append(f"### {feature.id}")
+                lines.append(f"### Feature: {feature.id}")
                 lines.append(f"**{feature.description}**")
                 lines.append("")
 
@@ -379,9 +379,9 @@ class Task(RenderableModel):
             toc_lines.append("- [Features](#features)")
             for feature_id in sorted(self.spec.features.keys()):
                 feature = self.spec.features[feature_id]
-                # Feature anchor: generated from ID only (markdown naturally does this)
-                feature_anchor = self._generate_anchor(feature_id)
-                toc_lines.append(f"    - [{feature_id}](#{feature_anchor})")
+                # Feature anchor: generated from full heading "Feature: {id}"
+                feature_anchor = self._generate_anchor(f"Feature: {feature_id}")
+                toc_lines.append(f"    - [Feature: {feature_id}](#{feature_anchor})")
 
                 # Add constraints for this feature (nested deeper with 6-space indentation)
                 if feature.constraints:

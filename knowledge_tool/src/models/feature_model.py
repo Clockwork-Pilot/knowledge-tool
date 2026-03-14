@@ -59,7 +59,7 @@ class Feature(RenderableModel):
                 lines.append("")
 
         # Feature header - use just ID for clean anchor generation
-        lines.append(f"# {self.id}")
+        lines.append(f"# Feature: {self.id}")
         lines.append(f"**{self.description}**")
         lines.append("")
 
