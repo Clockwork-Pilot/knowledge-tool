@@ -24,7 +24,8 @@ class Spec(RenderableModel):
 
     type: Literal["Spec"] = "Spec"
     model_version: int = 1
-    description: str = Field(..., description="Specification description")
+    version: int = 1
+    description: str = Field(default="", description="Specification description")
     features: Optional[Dict[str, Feature]] = Field(
         None, description="Features indexed by feature ID"
     )

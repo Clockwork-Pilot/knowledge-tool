@@ -221,7 +221,7 @@ class TestTaskRender:
             description="Task specification"
         )
 
-        spec = Spec(version=1, description=description)
+        spec = Spec(version=1, description="Task specification")
 
         task = Task(
             id="task_1",
@@ -245,7 +245,7 @@ class TestTaskRender:
             description="Task specification"
         )
 
-        spec = Spec(version=1, description=description)
+        spec = Spec(version=1, description="Task specification")
 
         task = Task(
             id="task_1",
@@ -271,7 +271,7 @@ class TestTaskRender:
             description="Task specification"
         )
 
-        spec = Spec(version=1, description=description)
+        spec = Spec(version=1, description="Task specification")
 
         iteration1 = Iteration(id="iteration_1")
         iteration2 = Iteration(id="iteration_2")
@@ -313,7 +313,7 @@ class TestTaskRender:
             opts=Opts(render_toc=True)
         )
 
-        spec = Spec(version=1, description=description)
+        spec = Spec(version=1, description="Task specification")
 
         task = Task(
             id="task_1",
@@ -325,8 +325,8 @@ class TestTaskRender:
 
         assert "## Table of Contents" in rendered
         assert "- [Specification" in rendered
-        # Spec's children TOC should be indented under Specification
-        assert "  - [Section 1](#section-1)" in rendered
+        # With string-based description, nested TOC from Doc children is not included
+        assert "  - [Section 1](#section-1)" not in rendered
 
     def test_task_render_without_spec_toc(self):
         """Test Task TOC does not include Spec's description nested TOC when description.opts.render_toc is not enabled."""
@@ -346,7 +346,7 @@ class TestTaskRender:
             opts=Opts(render_toc=False)
         )
 
-        spec = Spec(version=1, description=description)
+        spec = Spec(version=1, description="Task specification")
 
         task = Task(
             id="task_1",
@@ -371,7 +371,7 @@ class TestTaskRender:
             description="Task specification"
         )
 
-        spec = Spec(version=1, description=description)
+        spec = Spec(version=1, description="Task specification")
 
         # Child with metadata so it generates TOC entries
         child_section = Doc(

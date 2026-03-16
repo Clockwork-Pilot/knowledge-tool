@@ -226,8 +226,7 @@ class Task(RenderableModel):
     @classmethod
     def create_default(cls) -> "Task":
         """Create a default Task instance with required spec."""
-        description = Doc(id="description", label="Specification Description", metadata={})
-        spec = Spec(version=1, description=description)
+        spec = Spec(description="Specification Description")
         return cls(
             id=f"{cls.__name__.lower()}_1",
             spec=spec,
@@ -275,10 +274,9 @@ class Task(RenderableModel):
                 lines.append("")
 
         # Render specification section (without its own TOC, since Task has comprehensive TOC)
-        lines.append(f"## Specification (v{self.spec.version})")
+        lines.append("## Specification")
         lines.append("")
-        spec_markdown = self.spec.description.render(include_toc=False)
-        lines.append(spec_markdown)
+        lines.append(self.spec.description)
         lines.append("")
 
         # Render features section
@@ -403,15 +401,7 @@ class Task(RenderableModel):
         toc_lines = []
 
         # Add Specification section
-        spec_anchor = f"specification-v{self.spec.version}".lower()
-        toc_lines.append(f"- [Specification (v{self.spec.version})](#{spec_anchor})")
-
-        # Generate TOC for Specification if the Doc has render_toc enabled
-        if self.spec.description.opts and self.spec.description.opts.render_toc:
-            spec_toc = self.spec.description.render_toc()
-            # Indent spec's TOC under Specification with 4-space indentation
-            for toc_line in spec_toc:
-                toc_lines.append("    " + toc_line)
+        toc_lines.append("- [Specification](#specification)")
 
         # Add Features section if there are features
         if self.spec.features:
@@ -515,8 +505,7 @@ class Task(RenderableModel):
         toc_lines = []
 
         # Specification entry
-        spec_anchor = f"specification-v{self.spec.version}".lower()
-        toc_lines.append(f"- [Specification (v{self.spec.version})](#{spec_anchor})")
+        toc_lines.append("- [Specification](#specification)")
 
         # Features entry (if features exist)
         if self.spec.features:

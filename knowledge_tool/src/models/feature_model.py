@@ -73,35 +73,13 @@ class Feature(RenderableModel):
 
         # Render embedded constraints
         if self.constraints:
-            bash_constraints = {}
-            prompt_constraints = {}
-
-            for c_id, c in self.constraints.items():
-                if isinstance(c, ConstraintBash):
-                    bash_constraints[c_id] = c
-
-            if bash_constraints or prompt_constraints:
-                lines.append("## Validation Constraints")
+            lines.append("## Validation Constraints")
+            lines.append("")
+            for c_id, bash_c in self.constraints.items():
+                lines.append(f"#### {c_id}")
+                lines.append(f"**Description:** {bash_c.description}")
+                lines.append(f"**Command:** `{bash_c.cmd}`")
                 lines.append("")
-
-            if bash_constraints:
-                lines.append("### Bash Constraints")
-                lines.append("")
-                for c_id, bash_c in bash_constraints.items():
-                    lines.append(f"#### {c_id}")
-                    lines.append(f"**Description:** {bash_c.description}")
-                    lines.append(f"**Command:** `{bash_c.cmd}`")
-                    lines.append("")
-
-            if prompt_constraints:
-                lines.append("### Prompt Constraints")
-                lines.append("")
-                for c_id, prompt_c in prompt_constraints.items():
-                    lines.append(f"#### {c_id}")
-                    lines.append(f"**Description:** {prompt_c.description}")
-                    lines.append(f"**Prompt:** {prompt_c.prompt}")
-                    lines.append(f"**Expected Verdict:** `{prompt_c.verdict_expect_rule}`")
-                    lines.append("")
 
         # Render metadata
         if self.metadata:
@@ -129,19 +107,10 @@ class Feature(RenderableModel):
             toc_lines.append("- [Goals](#goals)")
 
         if self.constraints:
-            bash_count = sum(1 for c in self.constraints.values() if isinstance(c, ConstraintBash))
-
-            if bash_count:
-                toc_lines.append("- [Validation Constraints](#validation-constraints)")
-                if bash_count:
-                    toc_lines.append("  - [Bash Constraints](#bash-constraints)")
-                    # Add individual bash constraint TOC entries
-                    for c_id, constraint in sorted(self.constraints.items()):
-                        if isinstance(constraint, ConstraintBash):
-                            # Use constraint's render_toc with extra indentation
-                            constraint_toc = constraint.render_toc()
-                            for toc_line in constraint_toc:
-                                toc_lines.append("    " + toc_line)
+            toc_lines.append("- [Validation Constraints](#validation-constraints)")
+            for c_id, constraint in sorted(self.constraints.items()):
+                for toc_line in constraint.render_toc():
+                    toc_lines.append("  " + toc_line)
 
         if self.metadata:
             toc_lines.append("- [Metadata](#metadata)")

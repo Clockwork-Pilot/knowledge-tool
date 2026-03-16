@@ -17,7 +17,7 @@ class ConstraintBashResult(BaseModel):
 
     constraint_id: str = Field(..., description="ID of the constraint that was executed")
     verdict: bool = Field(..., description="Whether the constraint passed (True) or failed (False)")
-    shrunken_output: str = Field(..., description="Truncated stdout/stderr output")
+    shrunken_output: Optional[str] = Field(None, description="Truncated stdout/stderr output")
     timestamp: Optional[datetime] = Field(None, description="When the constraint was executed")
 
 
@@ -25,7 +25,7 @@ class FeatureResult(BaseModel):
     """Constraint execution results for a feature."""
 
     feature_id: str = Field(..., description="ID of the feature")
-    constraints_results: Dict[str, Union[ConstraintBashResult]] = Field(
+    constraints_results: Dict[str, ConstraintBashResult] = Field(
         ..., description="Constraint execution results indexed by constraint ID (required)"
     )
 
@@ -157,50 +157,19 @@ class ChecksResults(RenderableModel):
                         lines.append(f"### Feature: {feature_id}")
                         lines.append("")
 
-                        # Organize constraints by type
-                        bash_constraints = {}
-                        prompt_constraints = {}
-
-                        for constraint_id, result in feature_result.constraints_results.items():
-                            if isinstance(result, ConstraintBashResult):
-                                bash_constraints[constraint_id] = result
-                            elif isinstance(result, ConstraintPromptResult):
-                                prompt_constraints[constraint_id] = result
-
-                        # Render bash constraints
-                        if bash_constraints:
-                            lines.append("**Bash Constraints:**")
+                        for constraint_id in sorted(feature_result.constraints_results.keys()):
+                            result = feature_result.constraints_results[constraint_id]
+                            namespaced_id = f"{feature_id}.{constraint_id}"
+                            constraint_anchor = namespaced_id.replace("_", "-").replace(" ", "-").replace(".", "-")
+                            verdict_str = "✓ PASS" if result.verdict else "✗ FAIL"
+                            lines.append(f"<a id=\"{constraint_anchor}\"></a>")
+                            lines.append(f"#### {namespaced_id}")
+                            lines.append(f"**Verdict:** {verdict_str}")
+                            if result.timestamp:
+                                lines.append(f"**Timestamp:** {result.timestamp.isoformat()}")
+                            if result.shrunken_output:
+                                lines.append(f"**Output:** `{result.shrunken_output}`")
                             lines.append("")
-                            for constraint_id in sorted(bash_constraints.keys()):
-                                result = bash_constraints[constraint_id]
-                                namespaced_id = f"{feature_id}.{constraint_id}"
-                                constraint_anchor = namespaced_id.replace("_", "-").replace(" ", "-").replace(".", "-")
-                                verdict_str = "✓ PASS" if result.verdict else "✗ FAIL"
-                                lines.append(f"<a id=\"{constraint_anchor}\"></a>")
-                                lines.append(f"#### {namespaced_id}")
-                                lines.append(f"**Verdict:** {verdict_str}")
-                                if result.timestamp:
-                                    lines.append(f"**Timestamp:** {result.timestamp.isoformat()}")
-                                if result.shrunken_output:
-                                    lines.append(f"**Output:** `{result.shrunken_output}`")
-                                lines.append("")
-
-                        # Render prompt constraints
-                        if prompt_constraints:
-                            lines.append("**Prompt Constraints:**")
-                            lines.append("")
-                            for constraint_id in sorted(prompt_constraints.keys()):
-                                result = prompt_constraints[constraint_id]
-                                namespaced_id = f"{feature_id}.{constraint_id}"
-                                constraint_anchor = namespaced_id.replace("_", "-").replace(" ", "-").replace(".", "-")
-                                lines.append(f"<a id=\"{constraint_anchor}\"></a>")
-                                lines.append(f"#### {namespaced_id}")
-                                lines.append(f"**Verdict:** {result.verdict or '(empty)'}")
-                                if result.short_answer:
-                                    lines.append(f"**Answer:** {result.short_answer}")
-                                if result.timestamp:
-                                    lines.append(f"**Timestamp:** {result.timestamp.isoformat()}")
-                                lines.append("")
 
                         lines.append("")
 

@@ -5,7 +5,6 @@ from .doc_model import Doc, Opts
 from .feature_model import Feature
 from .results_model import ConstraintBashResult, FeatureResult, ChecksResults, FeaturesStats, FeaturesStatsDiff
 from .constraints_model import (
-    FeaturesScope,
     ConstraintBash,
 )
 from .task_model import Task, Iteration, CodeStats, TaskTestMetrics
@@ -17,7 +16,6 @@ from .spec_model import Spec
 MODEL_REGISTRY = {
     "Doc": Doc,
     "Feature": Feature,
-    "FeaturesScope": FeaturesScope,
     "ChecksResults": ChecksResults,
     "Task": Task,
     "Iteration": Iteration,
@@ -29,7 +27,6 @@ __all__ = [
     "Doc",
     "Opts",
     "Feature",
-    "FeaturesScope",
     "ConstraintBash",
     "ConstraintBashResult",
     "FeatureResult",
@@ -44,5 +41,3 @@ __all__ = [
     "MODEL_REGISTRY",
 ]
 
-# Resolve forward references after all modules are loaded
-FeaturesScope.model_rebuild()

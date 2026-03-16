@@ -7,9 +7,9 @@ from datetime import datetime
 import pytest
 
 from models import (
-    Feature, FeaturesScope, Task, MODEL_REGISTRY,
-    ConstraintBash, ConstraintPrompt, ConstraintBashResult, ConstraintPromptResult,
-    Constraint, ChecksResults, FeatureResult
+    Feature, Task, MODEL_REGISTRY,
+    ConstraintBash, ConstraintBashResult,
+    ChecksResults, FeatureResult
 )
 
 
@@ -64,94 +64,6 @@ class TestFeatureModel:
         assert "constraints" in data
 
 
-class TestFeaturesScopeModel:
-    """Test FeaturesScope model creation and rendering."""
-
-    def test_features_scope_creation(self):
-        """Test creating a FeaturesScope instance."""
-        features_scope = FeaturesScope(scope="local")
-
-        assert features_scope.type == "FeaturesScope"
-        assert features_scope.scope == "local"
-        assert features_scope.features is None
-        assert features_scope.metadata == {}
-
-    def test_features_scope_with_features(self):
-        """Test FeaturesScope with features."""
-        feature1 = Feature(
-            id="g1",
-            description="First feature",
-            constraint="cmd1"
-        )
-        feature2 = Feature(
-            id="g2",
-            description="Second feature",
-            constraint="cmd2"
-        )
-
-        features_scope = FeaturesScope(
-            scope="global",
-            features={"g1": feature1, "g2": feature2},
-            metadata={"version": "1.0"}
-        )
-
-        assert len(features_scope.features) == 2
-        assert features_scope.features["g1"].description == "First feature"
-        assert features_scope.metadata["version"] == "1.0"
-        assert features_scope.scope == "global"
-
-    def test_features_scope_is_root(self):
-        """Test that FeaturesScope can be a root document."""
-        features_scope = FeaturesScope(scope="local")
-        assert features_scope.is_can_be_root() is True
-
-    def test_features_scope_render(self):
-        """Test FeaturesScope rendering to markdown."""
-        bash_constraint = ConstraintBash(
-            id="c1",
-            cmd="grep -q 'feature_x' src/main.py",
-            description="Check for feature_x"
-        )
-        feature = Feature(
-            id="g1",
-            description="Add feature X",
-            constraints={"c1": bash_constraint}
-        )
-
-        features_scope = FeaturesScope(
-            scope="local",
-            features={"g1": feature},
-            metadata={"created": "2025-03-08"}
-        )
-
-        markdown = features_scope.render()
-
-        assert "## Features" in markdown
-        assert "g1: Add feature X" in markdown
-        assert "grep -q 'feature_x' src/main.py" in markdown
-        assert "## Metadata" in markdown
-
-    def test_features_scope_render_toc(self):
-        """Test FeaturesScope table of contents rendering."""
-        feature1 = Feature(id="g1", description="Feature 1", constraint="cmd1")
-        feature2 = Feature(id="g2", description="Feature 2", constraint="cmd2")
-
-        features_scope = FeaturesScope(scope="local", features={"g1": feature1, "g2": feature2})
-        toc = features_scope.render_toc()
-
-        assert len(toc) > 0
-        assert any("Features" in line for line in toc)
-        assert any("g1" in line for line in toc)
-        assert any("g2" in line for line in toc)
-
-    def test_features_scope_default_factory(self):
-        """Test FeaturesScope.create_default()."""
-        features_scope = FeaturesScope.create_default()
-
-        assert features_scope.type == "FeaturesScope"
-        assert features_scope.scope == "local"
-        assert features_scope.features is None
-
 
 class TestTaskWithFeatures:
     """Test Task model with features field."""
@@ -166,7 +78,7 @@ class TestTaskWithFeatures:
 
     def test_task_with_spec_features(self):
         """Test Task with spec that contains features."""
-        from models import Doc, Spec
+        from models import Spec
 
         feature = Feature(
             id="g1",
@@ -174,10 +86,9 @@ class TestTaskWithFeatures:
             constraint="test command"
         )
 
-        description = Doc(id="description", label="Specification")
         spec = Spec(
             version=1,
-            description=description,
+            description="Specification description",
             features={"g1": feature}
         )
         task = Task(
@@ -192,11 +103,10 @@ class TestTaskWithFeatures:
 
     def test_task_serialization_with_spec(self):
         """Test Task serializes with spec."""
-        from models import Doc, Spec
+        from models import Spec
 
         feature = Feature(id="g1", description="Feature", constraint="cmd")
-        description = Doc(id="description", label="Specification")
-        spec = Spec(version=1, description=description, features={"g1": feature})
+        spec = Spec(version=1, description="Specification description", features={"g1": feature})
         task = Task(id="task1", spec=spec)
 
         data = task.model_dump()
@@ -208,14 +118,9 @@ class TestTaskWithFeatures:
 class TestModelRegistry:
     """Test model registry includes new models."""
 
-    def test_features_scope_in_registry(self):
-        """Test that FeaturesScope is registered."""
-        assert "FeaturesScope" in MODEL_REGISTRY
-        assert MODEL_REGISTRY["FeaturesScope"] is FeaturesScope
-
     def test_all_root_models_registered(self):
         """Test all expected models are in registry."""
-        expected = ["Doc", "FeaturesScope", "Task", "Iteration", "ChecksResults"]
+        expected = ["Doc", "Task", "Iteration", "ChecksResults"]
         for model_name in expected:
             assert model_name in MODEL_REGISTRY, f"{model_name} not in MODEL_REGISTRY"
 
@@ -251,69 +156,6 @@ class TestConstraintBashModel:
 
         assert bash.id == "c1"
 
-
-class TestConstraintPromptModel:
-    """Test ConstraintPrompt model with regex validation."""
-
-    def test_constraint_prompt_creation(self):
-        """Test creating a ConstraintPrompt instance."""
-        prompt = ConstraintPrompt(
-            id="p1",
-            prompt="Is the code correct?",
-            verdict_expect_rule="(yes|true|correct)",
-            description="Check code correctness",
-            scope="global"
-        )
-
-        assert prompt.id == "p1"
-        assert prompt.prompt == "Is the code correct?"
-        assert prompt.verdict_expect_rule == "(yes|true|correct)"
-        assert prompt.scope == "global"
-
-    def test_constraint_prompt_lazy_regex_compilation(self):
-        """Test regex is lazily compiled on first access."""
-        prompt = ConstraintPrompt(
-            id="p1",
-            prompt="Test",
-            verdict_expect_rule="test_.*",
-            description="Test prompt"
-        )
-
-        # Regex should not be compiled yet
-        assert prompt._compiled_regex is None
-
-        # Access compiled regex
-        compiled = prompt.get_compiled_regex()
-        assert compiled is not None
-        assert isinstance(compiled, type(re.compile("")))
-
-        # Second access returns cached version
-        compiled2 = prompt.get_compiled_regex()
-        assert compiled is compiled2  # Same object
-
-    def test_constraint_prompt_regex_validation(self):
-        """Test invalid regex is rejected."""
-        with pytest.raises(ValueError, match="Invalid regex"):
-            ConstraintPrompt(
-                id="p1",
-                prompt="Test",
-                verdict_expect_rule="[invalid(regex",  # Invalid regex
-                description="Test"
-            )
-
-    def test_constraint_prompt_regex_matching(self):
-        """Test compiled regex matching."""
-        prompt = ConstraintPrompt(
-            id="p1",
-            prompt="What is status?",
-            verdict_expect_rule="(pass|success|ok)",
-            description="Check status"
-        )
-
-        regex = prompt.get_compiled_regex()
-        assert regex.search("pass") is not None
-        assert regex.search("success") is not None
-        assert regex.search("fail") is None
 
 
 class TestConstraintBashResultModel:
@@ -357,33 +199,6 @@ class TestConstraintBashResultModel:
         assert data["verdict"] is True
 
 
-class TestConstraintPromptResultModel:
-    """Test ConstraintPromptResult model."""
-
-    def test_prompt_result_creation(self):
-        """Test creating ConstraintPromptResult."""
-        result = ConstraintPromptResult(
-            constraint_id="p1",
-            verdict="pass",
-            short_answer="Yes, it's correct."
-        )
-
-        assert result.constraint_id == "p1"
-        assert result.verdict == "pass"
-        assert result.short_answer == "Yes, it's correct."
-
-    def test_prompt_result_with_timestamp(self):
-        """Test ConstraintPromptResult with timestamp."""
-        now = datetime.now()
-        result = ConstraintPromptResult(
-            constraint_id="p1",
-            verdict="success",
-            short_answer="Test passed",
-            timestamp=now
-        )
-
-        assert result.timestamp == now
-
 
 class TestFeatureResultModel:
     """Test FeatureResult model for grouping constraint results by feature."""
@@ -405,28 +220,6 @@ class TestFeatureResultModel:
         assert len(feature_result.constraints_results) == 1
         assert feature_result.constraints_results["c1"].verdict is True
 
-    def test_feature_result_with_multiple_constraints(self):
-        """Test FeatureResult with multiple constraint results."""
-        bash_result = ConstraintBashResult(
-            constraint_id="c1",
-            verdict=True,
-            shrunken_output="ok"
-        )
-        prompt_result = ConstraintPromptResult(
-            constraint_id="p1",
-            verdict="pass",
-            short_answer="Passed"
-        )
-
-        feature_result = FeatureResult(
-            feature_id="feature1",
-            constraints_results={"c1": bash_result, "p1": prompt_result}
-        )
-
-        assert feature_result.feature_id == "feature1"
-        assert len(feature_result.constraints_results) == 2
-        assert isinstance(feature_result.constraints_results["c1"], ConstraintBashResult)
-        assert isinstance(feature_result.constraints_results["p1"], ConstraintPromptResult)
 
     def test_feature_result_serialization(self):
         """Test FeatureResult serialization to JSON."""
@@ -446,64 +239,6 @@ class TestFeatureResultModel:
         assert "c1" in data["constraints_results"]
         assert data["constraints_results"]["c1"]["verdict"] is False
 
-
-class TestConstraintModel:
-    """Test Constraint wrapper model."""
-
-    def test_constraint_with_bash(self):
-        """Test Constraint with bash constraint."""
-        bash = ConstraintBash(
-            id="c1",
-            cmd="test -f file.txt",
-            description="File exists"
-        )
-
-        constraint = Constraint(
-            id="const1",
-            scope="local",
-            constraint_bash=bash
-        )
-
-        assert constraint.constraint_bash is not None
-        assert constraint.constraint_prompt is None
-
-    def test_constraint_with_prompt(self):
-        """Test Constraint with prompt constraint."""
-        prompt = ConstraintPrompt(
-            id="p1",
-            prompt="Is valid?",
-            verdict_expect_rule="yes|true",
-            description="Validation"
-        )
-
-        constraint = Constraint(
-            id="const1",
-            scope="local",
-            constraint_prompt=prompt
-        )
-
-        assert constraint.constraint_bash is None
-        assert constraint.constraint_prompt is not None
-
-    def test_constraint_rejects_both_set(self):
-        """Test Constraint rejects both bash and prompt."""
-        bash = ConstraintBash(id="c1", cmd="test", description="test")
-        prompt = ConstraintPrompt(
-            id="p1", prompt="test", verdict_expect_rule="t.*", description="test"
-        )
-
-        with pytest.raises(ValueError, match="Exactly one"):
-            Constraint(
-                id="const1",
-                scope="local",
-                constraint_bash=bash,
-                constraint_prompt=prompt
-            )
-
-    def test_constraint_rejects_neither_set(self):
-        """Test Constraint rejects neither bash nor prompt."""
-        with pytest.raises(ValueError, match="Exactly one"):
-            Constraint(id="const1", scope="local")
 
 
 class TestChecksResultsModel:
@@ -540,23 +275,6 @@ class TestChecksResultsModel:
         assert len(test_results.features_results) == 1
         assert test_results.features_results["f1"].constraints_results["c1"].verdict is True
 
-    def test_test_results_with_prompt_results(self):
-        """Test ChecksResults with prompt constraint results."""
-        result = ConstraintPromptResult(
-            constraint_id="p1",
-            verdict="success",
-            short_answer="Passed"
-        )
-
-        feature_result = FeatureResult(
-            feature_id="f1",
-            constraints_results={"p1": result}
-        )
-        test_results = ChecksResults(
-            features_results={"f1": feature_result}
-        )
-
-        assert test_results.features_results["f1"].constraints_results["p1"].verdict == "success"
 
     def test_test_results_is_root(self):
         """Test ChecksResults can be a root document."""
@@ -572,11 +290,10 @@ class TestChecksResultsModel:
     def test_test_results_render(self):
         """Test ChecksResults markdown rendering."""
         result1 = ConstraintBashResult(constraint_id="c1", verdict=True, shrunken_output="ok")
-        result2 = ConstraintPromptResult(constraint_id="p1", verdict="pass", short_answer="Yes")
 
         feature_result = FeatureResult(
             feature_id="f1",
-            constraints_results={"c1": result1, "p1": result2}
+            constraints_results={"c1": result1}
         )
         test_results = ChecksResults(
             features_results={"f1": feature_result}
@@ -586,11 +303,8 @@ class TestChecksResultsModel:
 
         assert "## Constraint Results" in markdown
         assert "### Feature: f1" in markdown
-        assert "**Bash Constraints:**" in markdown
-        assert "**Prompt Constraints:**" in markdown
         assert "✓ PASS" in markdown
         assert "f1.c1" in markdown
-        assert "f1.p1" in markdown
 
     def test_test_results_render_toc(self):
         """Test ChecksResults table of contents rendering."""
