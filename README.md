@@ -4,7 +4,7 @@ A reusable knowledge base system with JSON Patch operations, validation, and aut
 
 ## Important: Read-Only Files
 
-❌ DO NOT Edit Read-only `.json` or `.md` Files Directly.
+❌ DO NOT Edit Read-only `.k.json` or `.k.md` Files Directly.
 
 All modifications must go through `patch_knowledge_document`
 
@@ -12,13 +12,13 @@ If you encounter "Permission denied" when trying to edit, this is by design—us
 
 ## Documentation
 
-**All documentation is maintained in `knowledge_tool.json`** which renders to `knowledge_tool.md`. This is the single source of truth for:
+**Knowledge Tool documentation is maintained in `knowledge_tool.k.json`** which renders to `knowledge_tool.k.md`. This is the single source of truth for:
 - API reference (Scripts and Functions)
 - Architecture and workflow
 - Examples and usage patterns
 - Configuration options
 
-To view the documentation: See `knowledge_tool.md` (auto-generated from JSON)
+To view the documentation: See `knowledge_tool.k.md` (auto-generated from JSON)
 
 ## Quick Start
 
@@ -43,11 +43,6 @@ python /path/to/knowledge_tool/patch_knowledge_document.py doc.json '[{"op": "ad
 - The scripts are self-contained and work from any directory without installation
 - Run `patch_knowledge_document.py` directly: `python /path/to/patch_knowledge_document.py`
 - The script automatically locates its dependencies in the `src/` directory
-
-## Configuration
-
-### Centralized Python Cache
-All `__pycache__` directories are configured to be created in `.cache/pycache/` via the `PYTHONPYCACHEPREFIX` environment variable. This keeps the project directory clean. The configuration is automatically applied when running tests via `conftest.py`.
 
 ## Development in Docker
 

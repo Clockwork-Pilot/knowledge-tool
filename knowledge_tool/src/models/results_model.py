@@ -21,20 +21,11 @@ class ConstraintBashResult(BaseModel):
     timestamp: Optional[datetime] = Field(None, description="When the constraint was executed")
 
 
-class ConstraintPromptResult(BaseModel):
-    """Result of executing a prompt constraint."""
-
-    constraint_id: str = Field(..., description="ID of the constraint that was executed")
-    verdict: str = Field(..., description="LLM's verdict (to be matched against verdict_expect_rule)")
-    short_answer: str = Field(..., description="LLM's short answer/reasoning")
-    timestamp: Optional[datetime] = Field(None, description="When the constraint was executed")
-
-
 class FeatureResult(BaseModel):
     """Constraint execution results for a feature."""
 
     feature_id: str = Field(..., description="ID of the feature")
-    constraints_results: Dict[str, Union[ConstraintBashResult, ConstraintPromptResult]] = Field(
+    constraints_results: Dict[str, Union[ConstraintBashResult]] = Field(
         ..., description="Constraint execution results indexed by constraint ID (required)"
     )
 

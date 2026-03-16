@@ -24,20 +24,23 @@ class Spec(RenderableModel):
 
     type: Literal["Spec"] = "Spec"
     model_version: int = 1
-    version: int = Field(..., description="Specification version number")
-    description: Doc = Field(..., description="Detailed specification description as a Doc")
+    description: str = Field(..., description="Specification description")
     features: Optional[Dict[str, Feature]] = Field(
         None, description="Features indexed by feature ID"
     )
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Metadata (created_at, updated_at, etc.)"
-    )
+    # { "<feature-id>": {"<constraint-id>": 1} }
+    # increment constraint when its check fails
+    do_not_touch_fails_history: Dict[str, Dict[str, int]] = {}
+
+    @classmethod
+    def save_failed_constraint(cls, feature_id: str, constraint_id: str):
+        cls.do_not_touch_fails_history.setdefault(feature_id, {}).setdefault(constraint_id, 0)
+        cls.do_not_touch_fails_history[feature_id][constraint_id] += 1
 
     @classmethod
     def create_default(cls) -> "Spec":
         """Create a default Spec instance."""
-        description = Doc(id="description", label="Specification Description", metadata={})
-        return cls(version=1, description=description, features=None)
+        return cls(description="Specification description", features=None)
 
     def render(self, include_toc: bool = True) -> str:
         """Render Spec to markdown string.
@@ -58,17 +61,6 @@ class Spec(RenderableModel):
                 lines.extend(toc)
                 lines.append("")
 
-        # Spec header with version
-        lines.append(f"# Specification (v{self.version})")
-        lines.append("")
-
-        # Render description Doc
-        lines.append("## Description")
-        lines.append("")
-        description_markdown = self.description.render(include_toc=False)
-        lines.append(description_markdown)
-        lines.append("")
-
         # Render features section
         if self.features:
             lines.append("## Features")
@@ -83,14 +75,6 @@ class Spec(RenderableModel):
                         lines.append(f"- {c_id}: {constraint.description if hasattr(constraint, 'description') else 'N/A'}")
                     lines.append("")
                 lines.append("")
-
-        # Render metadata
-        if self.metadata:
-            lines.append("## Metadata")
-            lines.append("")
-            for key, value in self.metadata.items():
-                lines.append(f"- {key}: {value}")
-            lines.append("")
 
         return "\n".join(lines).strip()
 
@@ -108,9 +92,6 @@ class Spec(RenderableModel):
             toc_lines.append("- [Features](#features)")
             for feature_id in sorted(self.features.keys()):
                 toc_lines.append(f"  - [{feature_id}](#{feature_id})")
-
-        if self.metadata:
-            toc_lines.append("- [Metadata](#metadata)")
 
         return toc_lines
 

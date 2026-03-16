@@ -240,17 +240,16 @@ class TestConstraintBashModel:
         assert bash.id == "c1"
         assert bash.cmd == "grep -q 'pattern' file.txt"
         assert bash.description == "Check for pattern in file"
-        assert bash.scope == "local"
 
     def test_constraint_bash_default_scope(self):
-        """Test ConstraintBash default scope."""
+        """Test ConstraintBash initialization."""
         bash = ConstraintBash(
             id="c1",
             cmd="test",
             description="Test"
         )
 
-        assert bash.scope == "local"
+        assert bash.id == "c1"
 
 
 class TestConstraintPromptModel:

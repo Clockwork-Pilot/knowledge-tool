@@ -57,15 +57,15 @@ class TestTocLinks:
         return anchor
 
     def test_knowledge_tool_toc_links(self):
-        """Test that all TOC links in knowledge_tool.md are valid."""
-        md_path = Path(__file__).parent.parent.parent / "knowledge_tool.md"
+        """Test that all TOC links in knowledge_tool.k.md are valid."""
+        md_path = Path(__file__).parent.parent.parent / "knowledge_tool.k.md"
 
-        assert md_path.exists(), f"knowledge_tool.md not found at {md_path}"
+        assert md_path.exists(), f"knowledge_tool.k.md not found at {md_path}"
 
         with open(md_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        self._validate_toc_links(content, "knowledge_tool.md")
+        self._validate_toc_links(content, "knowledge_tool.k.md")
 
     def _validate_toc_links(self, content: str, doc_name: str = "document"):
         """Validate that all TOC links in markdown content are valid.
@@ -121,7 +121,7 @@ class TestTocLinks:
 
     def test_no_duplicate_toc_links(self):
         """Test that TOC doesn't have duplicate links."""
-        md_path = Path(__file__).parent.parent.parent / "knowledge_tool.md"
+        md_path = Path(__file__).parent.parent.parent / "knowledge_tool.k.md"
 
         with open(md_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -138,7 +138,7 @@ class TestTocLinks:
 
     def test_heading_consistency(self):
         """Test that special character handling is consistent in headings and anchors."""
-        md_path = Path(__file__).parent.parent.parent / "knowledge_tool.md"
+        md_path = Path(__file__).parent.parent.parent / "knowledge_tool.k.md"
 
         with open(md_path, 'r', encoding='utf-8') as f:
             content = f.read()

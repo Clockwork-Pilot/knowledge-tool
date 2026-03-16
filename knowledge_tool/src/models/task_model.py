@@ -217,9 +217,6 @@ class Task(RenderableModel):
     type: Literal["Task"] = "Task"
     model_version: int = 2
     id: str = Field(..., description="Unique task identifier")
-    status: Literal["planning", "executing", "failed", "succeed"] = Field(
-        "planning", description="Task status: planning|executing|failed|succeed"
-    )
     spec: Spec = Field(..., description="Specification defining task features and their constraints")
     iterations: Optional[Dict[str, Iteration]] = Field(
         None, description="Iterations indexed by iteration ID"
@@ -313,9 +310,6 @@ class Task(RenderableModel):
                         # Render constraint-specific details
                         if hasattr(constraint, 'cmd'):  # ConstraintBash
                             lines.append(f"**Command:** `{constraint.cmd}`")
-                        elif hasattr(constraint, 'prompt'):  # ConstraintPrompt
-                            lines.append(f"**Prompt:** {constraint.prompt}")
-                            lines.append(f"**Expected Verdict:** `{constraint.verdict_expect_rule}`")
 
                         lines.append("")
 
@@ -523,12 +517,6 @@ class Task(RenderableModel):
         # Specification entry
         spec_anchor = f"specification-v{self.spec.version}".lower()
         toc_lines.append(f"- [Specification (v{self.spec.version})](#{spec_anchor})")
-        if self.spec.description and self.spec.description.opts and self.spec.description.opts.render_toc:
-            spec_toc = self.spec.description.render_toc()
-            if spec_toc:
-                # Indent spec's TOC entries with 4-space indentation
-                for line in spec_toc:
-                    toc_lines.append("    " + line)
 
         # Features entry (if features exist)
         if self.spec.features:

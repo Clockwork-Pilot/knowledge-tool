@@ -7,10 +7,10 @@ from pydantic import BaseModel, Field
 # Support both package imports (.) and direct imports (models)
 try:
     from . import RenderableModel
-    from .constraints_model import ConstraintBash, ConstraintPrompt
+    from .constraints_model import ConstraintBash
 except ImportError:
     from models import RenderableModel
-    from constraints_model import ConstraintBash, ConstraintPrompt
+    from constraints_model import ConstraintBash
 
 
 class Feature(RenderableModel):
@@ -27,8 +27,8 @@ class Feature(RenderableModel):
     goals: Optional[list[str]] = Field(
         None, description="List of goals/objectives for this feature"
     )
-    constraints: Optional[Dict[str, Union[ConstraintBash, ConstraintPrompt]]] = Field(
-        None, description="Embedded constraints (bash commands or LLM prompts)"
+    constraints: Optional[Dict[str, ConstraintBash]] = Field(
+        None, description="Embedded constraints (bash commands)"
     )
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Metadata (created_at, updated_at, etc.)"
@@ -79,8 +79,6 @@ class Feature(RenderableModel):
             for c_id, c in self.constraints.items():
                 if isinstance(c, ConstraintBash):
                     bash_constraints[c_id] = c
-                elif isinstance(c, ConstraintPrompt):
-                    prompt_constraints[c_id] = c
 
             if bash_constraints or prompt_constraints:
                 lines.append("## Validation Constraints")
@@ -132,24 +130,14 @@ class Feature(RenderableModel):
 
         if self.constraints:
             bash_count = sum(1 for c in self.constraints.values() if isinstance(c, ConstraintBash))
-            prompt_count = sum(1 for c in self.constraints.values() if isinstance(c, ConstraintPrompt))
 
-            if bash_count or prompt_count:
+            if bash_count:
                 toc_lines.append("- [Validation Constraints](#validation-constraints)")
                 if bash_count:
                     toc_lines.append("  - [Bash Constraints](#bash-constraints)")
                     # Add individual bash constraint TOC entries
                     for c_id, constraint in sorted(self.constraints.items()):
                         if isinstance(constraint, ConstraintBash):
-                            # Use constraint's render_toc with extra indentation
-                            constraint_toc = constraint.render_toc()
-                            for toc_line in constraint_toc:
-                                toc_lines.append("    " + toc_line)
-                if prompt_count:
-                    toc_lines.append("  - [Prompt Constraints](#prompt-constraints)")
-                    # Add individual prompt constraint TOC entries
-                    for c_id, constraint in sorted(self.constraints.items()):
-                        if isinstance(constraint, ConstraintPrompt):
                             # Use constraint's render_toc with extra indentation
                             constraint_toc = constraint.render_toc()
                             for toc_line in constraint_toc:
