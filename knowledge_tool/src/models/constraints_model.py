@@ -123,16 +123,13 @@ class ConstraintBash(BaseModel):
             new_cmd = data.get('cmd')
             new_fails_count = data.get('fails_count', 0)
 
-            # Only block if BOTH:
-            # 1. The original and new are different AND
-            # 2. We're actively changing fails_count right now
-            # (Allow cmd mismatches if fails_count unchanged - constraint may have been previously fixed)
-            fails_count_changed = original_fails_count != new_fails_count
+            # Protect cmd and fails_count when constraint is locked (fails_count > 0)
+            # Description is allowed to change freely (it's just documentation)
             cmd_changed = original_cmd and new_cmd and original_cmd != new_cmd
+            fails_count_changed = original_fails_count != new_fails_count
 
-            # Block only fails_count changes when constraint is locked
-            # Allow cmd to differ (may have been fixed previously)
-            if fails_count_changed:
+            # Block changes to protected fields: cmd and fails_count
+            if cmd_changed or fails_count_changed:
                 raise ValueError(
                     f"Cannot update constraint '{constraint_id}': fails_count={fails_count} > 0. "
                     f"Fix the constraint to pass first."
