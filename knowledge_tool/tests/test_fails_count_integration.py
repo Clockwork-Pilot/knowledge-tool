@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration test: fails_count incrementation via task_features_checker.py
+"""Integration test: fails_count incrementation via check_spec_constraints.py
 
 Note: Tests are skipped - constraint_checker needs update for Spec documents (spec decoupling refactor).
 """
@@ -49,11 +49,11 @@ def test_fails_count_incremented_on_constraint_failure():
         # Write temporary spec
         spec_path.write_text(json.dumps(spec_data, indent=2))
 
-        # Run task_features_checker.py on spec
+        # Run check_spec_constraints.py on spec
         result = subprocess.run(
             [
                 'python3',
-                'constraints_tool/constraints_tool/task_features_checker.py',
+                'constraints_tool/constraints_tool/check_spec_constraints.py',
                 str(spec_path),
                 '--output-checks-path', str(checks_path)
             ],
@@ -118,11 +118,11 @@ def test_fails_count_not_incremented_on_passing_constraint():
         # Write temporary task
         spec_path.write_text(json.dumps(spec_data, indent=2))
 
-        # Run task_features_checker.py
+        # Run check_spec_constraints.py
         result = subprocess.run(
             [
                 'python3',
-                'constraints_tool/constraints_tool/task_features_checker.py',
+                'constraints_tool/constraints_tool/check_spec_constraints.py',
                 str(spec_path),
                 '--output-checks-path', str(checks_path)
             ],
