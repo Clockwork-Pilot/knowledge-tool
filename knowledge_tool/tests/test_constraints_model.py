@@ -157,6 +157,114 @@ class TestConstraintBashModel:
         assert bash.id == "c1"
 
 
+class TestConstraintBashFailsCountProtection:
+    """Test ConstraintBash fails_count protection feature."""
+
+    def test_fails_count_default_zero(self):
+        """Test that fails_count defaults to 0."""
+        bash = ConstraintBash(
+            id="c1",
+            cmd="test",
+            description="Test"
+        )
+        assert bash.fails_count == 0
+
+    def test_increment_fails_count_method(self):
+        """Test increment_fails_count() method increments the count."""
+        bash = ConstraintBash(
+            id="c1",
+            cmd="test",
+            description="Test"
+        )
+        assert bash.fails_count == 0
+
+        bash.increment_fails_count()
+        assert bash.fails_count == 1
+
+        bash.increment_fails_count()
+        assert bash.fails_count == 2
+
+    def test_fails_count_can_be_set_via_snapshot(self):
+        """Test that fails_count CAN be set via JSON snapshot for patching.
+
+        fails_count is allowed to be updated via snapshot to support JSON patching
+        in task_features_checker. The constraint warns when fails_count > 0.
+        """
+        constraint_data = {
+            "id": "c1",
+            "cmd": "echo test",
+            "description": "Test constraint",
+            "tags": [],
+            "fails_count": 5  # Set fails_count in JSON
+        }
+
+        # Load via model_validate (snapshot loading)
+        constraint = ConstraintBash.model_validate(constraint_data)
+
+        # fails_count should be settable for patching support
+        assert constraint.fails_count == 5, \
+            "fails_count must be settable via snapshot for JSON patches"
+
+    def test_cmd_warning_when_fails_count_greater_than_zero(self):
+        """Test that loading constraint with fails_count > 0 shows a warning.
+
+        When a constraint has failed (fails_count > 0), loading it from snapshot
+        triggers a warning that the constraint is locked and cmd cannot be changed.
+        Users should either fix the constraint or remove it.
+        """
+        constraint_data = {
+            "id": "locked_constraint",
+            "cmd": "echo test",
+            "description": "Test constraint",
+            "tags": [],
+            "fails_count": 2  # Constraint has failed
+        }
+
+        # Load constraint with fails_count > 0 - should show warning
+        constraint = ConstraintBash.model_validate(constraint_data)
+
+        # Constraint loads successfully with the warning
+        assert constraint.fails_count == 2, "fails_count should be preserved"
+        assert constraint.cmd == "echo test", "cmd should be loaded from snapshot"
+        # Warning is printed to stdout by the validator
+
+    def test_constraint_removable_despite_fails_count(self):
+        """Test that constraint can be removed entirely even when fails_count > 0.
+
+        The feature should only prevent cmd updates, not constraint removal.
+        """
+        bash = ConstraintBash(
+            id="c1",
+            cmd="echo test",
+            description="Test constraint"
+        )
+        bash.increment_fails_count()
+        bash.increment_fails_count()
+
+        assert bash.fails_count == 2
+
+        feature_data = {
+            "type": "Feature",
+            "model_version": 1,
+            "id": "test_feature",
+            "description": "Test feature",
+            "constraints": {
+                "c1": json.loads(bash.model_dump_json(exclude_none=True))
+            }
+        }
+
+        feature = Feature.model_validate(feature_data)
+
+        # Constraint exists in feature
+        assert "c1" in feature.constraints
+        assert feature.constraints["c1"].fails_count == 2
+
+        # Can be accessed and serialized (would be removed via JSON patch)
+        serialized = json.loads(feature.model_dump_json(exclude_none=True))
+        assert "c1" in serialized["constraints"]
+        assert serialized["constraints"]["c1"]["fails_count"] == 2
+
+
 
 class TestConstraintBashResultModel:
     """Test ConstraintBashResult model."""

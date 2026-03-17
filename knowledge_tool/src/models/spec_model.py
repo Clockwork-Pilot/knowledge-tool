@@ -7,11 +7,9 @@ from pydantic import Field
 # Support both package imports (.) and direct imports (models)
 try:
     from .base_model import RenderableModel
-    from .doc_model import Doc
     from .feature_model import Feature
 except ImportError:
     from base_model import RenderableModel
-    from doc_model import Doc
     from feature_model import Feature
 
 
@@ -29,14 +27,6 @@ class Spec(RenderableModel):
     features: Optional[Dict[str, Feature]] = Field(
         None, description="Features indexed by feature ID"
     )
-    # { "<feature-id>": {"<constraint-id>": 1} }
-    # increment constraint when its check fails
-    do_not_touch_fails_history: Dict[str, Dict[str, int]] = {}
-
-    @classmethod
-    def save_failed_constraint(cls, feature_id: str, constraint_id: str):
-        cls.do_not_touch_fails_history.setdefault(feature_id, {}).setdefault(constraint_id, 0)
-        cls.do_not_touch_fails_history[feature_id][constraint_id] += 1
 
     @classmethod
     def create_default(cls) -> "Spec":
