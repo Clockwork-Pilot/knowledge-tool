@@ -3,6 +3,7 @@
 
 from pathlib import Path
 from typing import Set
+from config import KNOWN_KNOWLEDGE_FILES_PATH
 
 
 def _is_restricted_path(file_path: str) -> bool:
@@ -37,9 +38,7 @@ def get_registry_path() -> Path:
     Returns:
         Path object pointing to protected_files.txt in plugin root.
     """
-    # Find the plugin root by looking for config.py
-    plugin_root = Path(__file__).parent.parent.parent  # knowledge_tool/knowledge_tool/ -> knowledge_tool/ -> /project
-    return plugin_root / "protected_files.txt"
+    return KNOWN_KNOWLEDGE_FILES_PATH
 
 
 def load_knowledge_files() -> Set[str]:

@@ -4,7 +4,7 @@
 import re
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Literal, Pattern, Union
-from pydantic import BaseModel, Field, model_validator, ValidationInfo
+from pydantic import BaseModel, Field, model_validator, ValidationInfo, model_serializer
 
 # Support both package imports (.) and direct imports (models)
 try:
@@ -34,23 +34,30 @@ class ConstraintBash(BaseModel):
         """
         self.fails_count += 1
 
+    @model_serializer
+    def serialize(self) -> dict:
+        """Serialize model, omitting fails_count when it is the default value (0)."""
+        d = {
+            'id': self.id,
+            'cmd': self.cmd,
+            'tags': self.tags,
+            'description': self.description,
+        }
+        if self.fails_count != 0:
+            d['fails_count'] = self.fails_count
+        return d
+
     @model_validator(mode='before')
     @classmethod
-    def warn_cmd_locked_when_failed(cls, data: Any, info: ValidationInfo) -> Any:
-        """Warn when cmd is present with fails_count > 0.
+    def protect_cmd_when_failed(cls, data: Any, info: ValidationInfo) -> Any:
+        """Document cmd protection when fails_count > 0.
 
-        When fails_count > 0 (constraint has failed), cmd becomes locked.
-        Users should either fix the constraint to pass or remove it entirely.
+        When fails_count > 0 (constraint has failed), the cmd field is locked.
+        Attempts to change it will fail during patch application.
         """
-        if isinstance(data, dict):
-            fails_count = data.get('fails_count', 0)
-            constraint_id = data.get('id', 'unknown')
-
-            # Warn if fails_count > 0 (cmd is locked)
-            if fails_count > 0:
-                print(f"⚠️  Constraint '{constraint_id}' has failed {fails_count} time(s) - cmd is locked. "
-                      f"Options: (1) Fix the test, or (2) Remove the constraint.")
-
+        # Note: Protection is enforced at patch application level, not during model loading.
+        # This allows constraints to be loaded from JSON while still preventing cmd changes
+        # through explicit patch operations.
         return data
 
     def render(self, include_toc: bool = True) -> str:
@@ -85,11 +92,12 @@ class ConstraintBash(BaseModel):
             output: Command stdout/stderr output
 
         Returns:
-            ConstraintBashResult with verdict and truncated output
+            ConstraintBashResult with verdict, output, and current fails_count
         """
         return ConstraintBashResult(
             constraint_id=self.id,
             verdict=verdict,
             shrunken_output=output[:100],
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
+            fails_count=self.fails_count
         )

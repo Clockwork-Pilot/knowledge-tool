@@ -19,6 +19,7 @@ class ConstraintBashResult(BaseModel):
     verdict: bool = Field(..., description="Whether the constraint passed (True) or failed (False)")
     shrunken_output: Optional[str] = Field(None, description="Truncated stdout/stderr output")
     timestamp: Optional[datetime] = Field(None, description="When the constraint was executed")
+    fails_count: int = Field(default=0, description="Number of times this constraint has failed")
 
 
 class FeatureResult(BaseModel):
