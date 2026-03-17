@@ -3,7 +3,7 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "y2-knowledge-tool"
+name = "y2-knowledge_document_tools"
 version = "0.1.0"
 description = "Knowledge-based document models for task management"
 requires-python = ">=3.9"

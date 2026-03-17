@@ -313,7 +313,7 @@
                   "4. Empty config if not found - Only built-in models (Doc, Task, etc.)"
                 ],
                 "examples": [
-                  "KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge-tool apply-json-patch doc.json '[...]'"
+                  "KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge_document_tools apply-json-patch doc.json '[...]'"
                 ]
               }
             },

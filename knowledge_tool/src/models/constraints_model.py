@@ -14,15 +14,11 @@ except ImportError:
     from models import RenderableModel
     from results_model import ConstraintBashResult, ChecksResults
 
-# define tags list
-LiteralTags = Literal["structure", "API", "logic"]
-
 class ConstraintBash(BaseModel):
     """Bash command constraint with fail tracking and cmd protection."""
 
     id: str = Field(..., description="Unique constraint identifier")
     cmd: str = Field(..., description="Bash command to execute")
-    tags: List[LiteralTags] = Field(default=[], description="List of tags for the constraint")
     description: str = Field(..., description="Description of the constraint")
     fails_count: int = Field(default=0, description="Count of failed constraint executions; prevents cmd updates when > 0")
 
@@ -61,7 +57,6 @@ class ConstraintBash(BaseModel):
         d = {
             'id': self.id,
             'cmd': self.cmd,
-            'tags': self.tags,
             'description': self.description,
         }
         if self.fails_count != 0:
@@ -71,14 +66,82 @@ class ConstraintBash(BaseModel):
     @model_validator(mode='before')
     @classmethod
     def protect_cmd_when_failed(cls, data: Any, info: ValidationInfo) -> Any:
-        """Document cmd protection when fails_count > 0.
+        """Protect constraint cmd and description when fails_count > 0.
 
-        When fails_count > 0 (constraint has failed), the cmd field is locked.
-        Attempts to change it will fail during patch application.
+        When fails_count > 0 (constraint has failed), the cmd and description fields are locked.
+        A constraint with failure history must be fixed to pass before allowing modifications.
+
+        Uses original_doc from validation context to detect modifications.
+
+        Raises:
+            ValueError: If attempting to modify cmd or description when fails_count > 0
         """
-        # Note: Protection is enforced at patch application level, not during model loading.
-        # This allows constraints to be loaded from JSON while still preventing cmd changes
-        # through explicit patch operations.
+        context = getattr(info, 'context', None) if info else None
+        if not context or not isinstance(data, dict):
+            return data
+
+        original_doc = context.get('original_doc', {})
+        if not original_doc:
+            return data
+
+        constraint_id = data.get('id')
+        if not constraint_id:
+            return data
+
+        # Search for the original constraint in either Spec or Task document structure
+        original_constraint = None
+        doc_type = original_doc.get('type')
+
+        if doc_type == 'Spec':
+            # Search through all features in Spec document
+            for feature in (original_doc.get('features') or {}).values():
+                if isinstance(feature, dict):
+                    for constraint_data in feature.get('constraints', {}).values():
+                        if isinstance(constraint_data, dict) and constraint_data.get('id') == constraint_id:
+                            original_constraint = constraint_data
+                            break
+                if original_constraint:
+                    break
+        else:
+            # Task document structure (legacy)
+            for feature in ((original_doc.get('spec') or {}).get('features') or {}).values():
+                if isinstance(feature, dict):
+                    for constraint_data in feature.get('constraints', {}).values():
+                        if isinstance(constraint_data, dict) and constraint_data.get('id') == constraint_id:
+                            original_constraint = constraint_data
+                            break
+                if original_constraint:
+                    break
+
+        if not original_constraint:
+            return data
+
+        fails_count = original_constraint.get('fails_count', 0)
+        if fails_count > 0:
+            original_cmd = original_constraint.get('cmd')
+            original_desc = original_constraint.get('description')
+            new_cmd = data.get('cmd')
+            new_desc = data.get('description')
+
+            # Only validate if constraint is actually being modified
+            cmd_changed = original_cmd and new_cmd and original_cmd != new_cmd
+            desc_changed = original_desc and new_desc and original_desc != new_desc
+
+            if not cmd_changed and not desc_changed:
+                # No changes to this constraint, allow it
+                return data
+
+            if cmd_changed:
+                raise ValueError(
+                    f"Cannot update constraint '{constraint_id}' cmd: fails_count={fails_count} > 0. "
+                    f"Fix the constraint to pass first."
+                )
+            if desc_changed:
+                raise ValueError(
+                    f"Cannot update constraint '{constraint_id}' description: fails_count={fails_count} > 0. "
+                    f"Fix the constraint to pass first."
+                )
+
         return data
 
     def render(self, include_toc: bool = True) -> str:

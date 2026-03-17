@@ -3,7 +3,7 @@
 
 import json
 import re
-from typing import Any, Dict, Optional, Literal
+from typing import Any, Dict, Optional, Literal, List
 from pydantic import BaseModel, Field, model_validator
 
 # Support both package imports (.) and direct imports (models)

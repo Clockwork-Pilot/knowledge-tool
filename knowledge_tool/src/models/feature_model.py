@@ -41,6 +41,7 @@ class Feature(RenderableModel):
 
         Uses original_doc from validation context to detect removed constraints,
         then delegates the error to ConstraintBash.validate_removal.
+        Supports both Spec (features at root) and Task (features in spec) documents.
         """
         context = getattr(info, 'context', None) if info else None
         if not context or not isinstance(data, dict):
@@ -51,11 +52,16 @@ class Feature(RenderableModel):
         if not feature_id or not original_doc:
             return data
 
-        original_constraints = (
-            ((original_doc.get('spec') or {})
-            .get('features') or {})
-            .get(feature_id) or {}
-        ).get('constraints') or {}
+        # Handle both document types:
+        # - Spec type: features at root level (original_doc.features)
+        # - Task type: features nested under spec (original_doc.spec.features)
+        doc_type = original_doc.get('type')
+        if doc_type == 'Spec':
+            original_features = original_doc.get('features') or {}
+        else:
+            original_features = (original_doc.get('spec') or {}).get('features') or {}
+
+        original_constraints = (original_features.get(feature_id) or {}).get('constraints') or {}
         new_constraints = data.get('constraints') or {}
 
         for cid, constraint_data in original_constraints.items():

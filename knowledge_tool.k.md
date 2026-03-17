@@ -228,7 +228,7 @@ Control where knowledge_config.yaml is searched for.
   4. Empty config if not found - Only built-in models (Doc, Task, etc.)
 
 ##### Examples
-  - KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge-tool apply-json-patch doc.json '[...]'
+  - KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge_document_tools apply-json-patch doc.json '[...]'
 
 #### Automatic Discovery
 When used as a Claude plugin or in a Claude project, knowledge_config.yaml is automatically found without manual configuration by searching upward from the current working directory.

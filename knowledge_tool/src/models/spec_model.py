@@ -2,7 +2,7 @@
 """Spec model for feature specifications with versioning."""
 
 from typing import Any, Dict, Optional, Literal
-from pydantic import Field
+from pydantic import Field, model_validator, ValidationInfo
 
 # Support both package imports (.) and direct imports (models)
 try:
@@ -24,9 +24,41 @@ class Spec(RenderableModel):
     model_version: int = 1
     version: int = 1
     description: str = Field(default="", description="Specification description")
+    contains_unverified_constraints: bool = False
     features: Optional[Dict[str, Feature]] = Field(
         None, description="Features indexed by feature ID"
     )
+
+    @model_validator(mode='before')
+    @classmethod
+    def compute_unverified_constraints_flag(cls, data: Any, info: ValidationInfo) -> Any:
+        """Automatically compute contains_unverified_constraints flag.
+
+        Scans all constraints in all features and sets the flag to:
+        - True if ANY constraint has fails_count < 1 (unproven constraint)
+        - False if ALL constraints have fails_count >= 1 (all proven) or no constraints exist
+        """
+        if not isinstance(data, dict):
+            return data
+
+        features = data.get('features') or {}
+        has_unverified = False
+
+        # Check all constraints in all features
+        for feature in features.values():
+            if isinstance(feature, dict):
+                constraints = feature.get('constraints') or {}
+                for constraint in constraints.values():
+                    if isinstance(constraint, dict):
+                        fails_count = constraint.get('fails_count', 0)
+                        if fails_count < 1:
+                            has_unverified = True
+                            break
+            if has_unverified:
+                break
+
+        data['contains_unverified_constraints'] = has_unverified
+        return data
 
     @classmethod
     def create_default(cls) -> "Spec":
