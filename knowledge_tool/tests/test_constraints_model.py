@@ -68,51 +68,40 @@ class TestFeatureModel:
 class TestTaskWithFeatures:
     """Test Task model with features field."""
 
-    def test_task_has_spec_field(self):
-        """Test that Task model includes spec field."""
+    def test_task_no_spec_field(self):
+        """Test that Task model no longer has spec field (decoupled to task-spec.k.json)."""
         task = Task.create_default()
 
-        assert hasattr(task, "spec")
-        assert task.spec is not None
-        assert task.spec.version == 1
+        # spec field should not exist or be None
+        assert task.spec is None if hasattr(task, "spec") else True
+        assert task.id == "task_1"
 
-    def test_task_with_spec_features(self):
-        """Test Task with spec that contains features."""
-        from models import Spec
+    def test_task_with_iterations(self):
+        """Test Task with iterations (features are now in task-spec.k.json)."""
+        from models import Iteration
 
-        feature = Feature(
-            id="g1",
-            description="Complete task objective",
-            constraint="test command"
-        )
-
-        spec = Spec(
-            version=1,
-            description="Specification description",
-            features={"g1": feature}
-        )
+        iteration = Iteration(id="iteration_1")
         task = Task(
             id="task1",
-            spec=spec
+            iterations={"iteration_1": iteration}
         )
 
-        assert task.spec is not None
-        assert task.spec.features is not None
-        assert len(task.spec.features) == 1
-        assert task.spec.features["g1"].description == "Complete task objective"
+        assert task.iterations is not None
+        assert len(task.iterations) == 1
+        assert task.iterations["iteration_1"].id == "iteration_1"
 
-    def test_task_serialization_with_spec(self):
-        """Test Task serializes with spec."""
-        from models import Spec
+    def test_task_serialization_without_spec(self):
+        """Test Task serializes without spec field (features in task-spec.k.json)."""
+        from models import Iteration
 
-        feature = Feature(id="g1", description="Feature", constraint="cmd")
-        spec = Spec(version=1, description="Specification description", features={"g1": feature})
-        task = Task(id="task1", spec=spec)
+        iteration = Iteration(id="iteration_1")
+        task = Task(id="task1", iterations={"iteration_1": iteration})
 
         data = task.model_dump()
 
-        assert "spec" in data
-        assert data["spec"]["features"]["g1"]["id"] == "g1"
+        assert "spec" not in data or data.get("spec") is None
+        assert "iterations" in data
+        assert data["iterations"]["iteration_1"]["id"] == "iteration_1"
 
 
 class TestModelRegistry:

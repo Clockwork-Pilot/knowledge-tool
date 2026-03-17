@@ -34,7 +34,7 @@ class Spec(RenderableModel):
         return cls(description="Specification description", features=None)
 
     def render(self, include_toc: bool = True) -> str:
-        """Render Spec to markdown string.
+        """Render Spec to markdown string with detailed features and constraints.
 
         Args:
             include_toc: Whether to include TOC in rendering (default: True).
@@ -44,6 +44,17 @@ class Spec(RenderableModel):
         """
         lines = []
 
+        # Render heading
+        lines.append(f"# Specification")
+        lines.append("")
+
+        # Render description
+        if self.description:
+            lines.append("## Overview")
+            lines.append("")
+            lines.append(self.description)
+            lines.append("")
+
         if include_toc:
             toc = self.render_toc()
             if toc:
@@ -52,37 +63,71 @@ class Spec(RenderableModel):
                 lines.extend(toc)
                 lines.append("")
 
-        # Render features section
+        # Render features section with detailed content
         if self.features:
             lines.append("## Features")
             lines.append("")
-            for feature_id, feature in sorted(self.features.items()):
-                lines.append(f"### {feature.id}: {feature.description}")
+            # Sort features by ID for consistent rendering
+            sorted_features = sorted(self.features.items())
+            for feature_id, feature in sorted_features:
+                # Render feature heading at level 3 (under ## Features)
+                lines.append(f"### Feature: {feature.id}")
+                lines.append(f"**{feature.description}**")
                 lines.append("")
+
+                # Render goals if present
+                if feature.goals:
+                    lines.append("**Goals:**")
+                    for goal in feature.goals:
+                        lines.append(f"- {goal}")
+                    lines.append("")
+
+                # Render constraints directly at level 4, without section headers
                 if feature.constraints:
-                    lines.append("**Constraints:**")
+                    for constraint_id, constraint in sorted(feature.constraints.items()):
+                        # Render constraint heading at level 4 (under ### feature)
+                        lines.append(f"#### {constraint.id}")
+                        lines.append(f"**Description:** {constraint.description}")
+
+                        # Render constraint-specific details
+                        if hasattr(constraint, 'cmd'):  # ConstraintBash
+                            lines.append(f"**Command:** `{constraint.cmd}`")
+
+                        lines.append("")
+
+                # Render metadata if present
+                if feature.metadata:
+                    lines.append("**Metadata:**")
+                    for key, value in feature.metadata.items():
+                        lines.append(f"- {key}: {value}")
                     lines.append("")
-                    for c_id, constraint in feature.constraints.items():
-                        lines.append(f"- {c_id}: {constraint.description if hasattr(constraint, 'description') else 'N/A'}")
-                    lines.append("")
-                lines.append("")
 
         return "\n".join(lines).strip()
 
     def render_toc(self) -> list:
-        """Generate table of contents for spec.
+        """Generate table of contents for spec with features and constraints.
 
         Returns:
-            List of TOC lines.
+            List of TOC lines with proper indentation.
         """
         toc_lines = []
 
-        toc_lines.append("- [Description](#description)")
+        toc_lines.append("- [Overview](#overview)")
 
         if self.features:
             toc_lines.append("- [Features](#features)")
             for feature_id in sorted(self.features.keys()):
-                toc_lines.append(f"  - [{feature_id}](#{feature_id})")
+                feature = self.features[feature_id]
+                # Feature anchor: generated from ID
+                feature_anchor = feature_id.lower().replace(' ', '-')
+                toc_lines.append(f"    - [Feature: {feature_id}](#{feature_anchor})")
+
+                # Add constraints for this feature (nested deeper with 6-space indentation)
+                if feature.constraints:
+                    for constraint_id in sorted(feature.constraints.keys()):
+                        # Constraint anchor: generated from ID only
+                        constraint_anchor = constraint_id.lower().replace(' ', '-')
+                        toc_lines.append(f"      - [{constraint_id}](#{constraint_anchor})")
 
         return toc_lines
 

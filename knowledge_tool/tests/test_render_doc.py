@@ -225,14 +225,13 @@ class TestTaskRender:
 
         task = Task(
             id="task_1",
-            spec=spec,
             opts=Opts(render_toc=False)
         )
 
         rendered = task.render()
 
         assert "# Task: task_1" in rendered
-        assert "## Specification" in rendered
+        assert "## Task Overview" in rendered
         assert "## Table of Contents" not in rendered
 
     def test_task_render_with_toc_no_iterations(self):
@@ -249,7 +248,6 @@ class TestTaskRender:
 
         task = Task(
             id="task_1",
-            spec=spec,
             opts=Opts(render_toc=True)
         )
 
@@ -257,7 +255,7 @@ class TestTaskRender:
 
         assert "# Task: task_1" in rendered
         assert "## Table of Contents" in rendered
-        assert "- [Specification" in rendered
+        assert "- [Task Overview" in rendered
         # No Iterations section should be in TOC
         assert "[Iterations]" not in rendered
 
@@ -278,7 +276,6 @@ class TestTaskRender:
 
         task = Task(
             id="task_1",
-            spec=spec,
             iterations={
                 "iteration_1": iteration1,
                 "iteration_2": iteration2,
@@ -290,7 +287,7 @@ class TestTaskRender:
 
         assert "# Task: task_1" in rendered
         assert "## Table of Contents" in rendered
-        assert "- [Specification" in rendered
+        assert "- [Task Overview" in rendered
         assert "- [Iterations](#iterations)" in rendered
         assert "- [iteration_1](#iteration_1)" in rendered
         assert "- [iteration_2](#iteration_2)" in rendered
@@ -317,14 +314,13 @@ class TestTaskRender:
 
         task = Task(
             id="task_1",
-            spec=spec,
             opts=Opts(render_toc=True)
         )
 
         rendered = task.render()
 
         assert "## Table of Contents" in rendered
-        assert "- [Specification" in rendered
+        assert "- [Task Overview" in rendered
         # With string-based description, nested TOC from Doc children is not included
         assert "  - [Section 1](#section-1)" not in rendered
 
@@ -350,14 +346,13 @@ class TestTaskRender:
 
         task = Task(
             id="task_1",
-            spec=spec,
             opts=Opts(render_toc=True)
         )
 
         rendered = task.render()
 
         assert "## Table of Contents" in rendered
-        assert "- [Specification" in rendered
+        assert "- [Task Overview" in rendered
         # Spec's children TOC should NOT be included
         assert "  - [Section 1]" not in rendered
 
@@ -389,7 +384,6 @@ class TestTaskRender:
 
         task = Task(
             id="task_1",
-            spec=spec,
             iterations={"iteration_1": iteration1},
             opts=Opts(render_toc=True)
         )

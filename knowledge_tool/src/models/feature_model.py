@@ -105,10 +105,23 @@ class Feature(RenderableModel):
         if self.constraints:
             lines.append("## Validation Constraints")
             lines.append("")
-            for c_id, bash_c in self.constraints.items():
-                lines.append(f"#### {c_id}")
-                lines.append(f"**Description:** {bash_c.description}")
-                lines.append(f"**Command:** `{bash_c.cmd}`")
+            for c_id, constraint in sorted(self.constraints.items()):
+                lines.append(f"### {constraint.id}")
+                lines.append(f"**Description:** {constraint.description}")
+
+                # Render constraint-specific details
+                if hasattr(constraint, 'cmd'):  # ConstraintBash
+                    lines.append(f"**Command:** `{constraint.cmd}`")
+
+                    # Show fails_count if present
+                    if hasattr(constraint, 'fails_count') and constraint.fails_count:
+                        lines.append(f"**Proven Failures:** {constraint.fails_count}")
+
+                if hasattr(constraint, 'prompt'):  # ConstraintPrompt
+                    lines.append(f"**Prompt:** {constraint.prompt[:100]}...")
+                    if hasattr(constraint, 'verdict_expect_rule'):
+                        lines.append(f"**Expected Verdict Pattern:** `{constraint.verdict_expect_rule}`")
+
                 lines.append("")
 
         # Render metadata
@@ -139,8 +152,9 @@ class Feature(RenderableModel):
         if self.constraints:
             toc_lines.append("- [Validation Constraints](#validation-constraints)")
             for c_id, constraint in sorted(self.constraints.items()):
-                for toc_line in constraint.render_toc():
-                    toc_lines.append("  " + toc_line)
+                # Add constraint ID as anchor
+                constraint_anchor = constraint.id.lower().replace(' ', '-')
+                toc_lines.append(f"  - [{constraint.id}](#{constraint_anchor})")
 
         if self.metadata:
             toc_lines.append("- [Metadata](#metadata)")

@@ -103,7 +103,7 @@ def main() -> None:
         )
         print("\nExamples:", file=sys.stderr)
         print(
-            '  python3 create_knowledge_document.py Task task.k.json',
+            '  python3 create_knowledge_document.py Task task-iterations.k.json',
             file=sys.stderr,
         )
         sys.exit(1)

@@ -10,12 +10,10 @@ from pydantic import BaseModel, Field, model_validator
 try:
     from .base_model import RenderableModel
     from .doc_model import Doc, Opts
-    from .spec_model import Spec
     from .results_model import FeaturesStats, FeaturesStatsDiff
 except ImportError:
     from base_model import RenderableModel
     from doc_model import Doc, Opts
-    from spec_model import Spec
     from results_model import FeaturesStats, FeaturesStatsDiff
 
 
@@ -217,7 +215,6 @@ class Task(RenderableModel):
     type: Literal["Task"] = "Task"
     model_version: int = 2
     id: str = Field(..., description="Unique task identifier")
-    spec: Spec = Field(..., description="Specification defining task features and their constraints")
     iterations: Optional[Dict[str, Iteration]] = Field(
         None, description="Iterations indexed by iteration ID"
     )
@@ -225,12 +222,9 @@ class Task(RenderableModel):
 
     @classmethod
     def create_default(cls) -> "Task":
-        """Create a default Task instance with required spec."""
-        spec = Spec(description="Specification Description")
+        """Create a default Task instance."""
         return cls(
             id=f"{cls.__name__.lower()}_1",
-            spec=spec,
-            status="planning",
             iterations=None,
             opts=None
         )
@@ -273,50 +267,11 @@ class Task(RenderableModel):
                 lines.extend(toc_lines)
                 lines.append("")
 
-        # Render specification section (without its own TOC, since Task has comprehensive TOC)
-        lines.append("## Specification")
+        # Note: Specification and features are now in task-spec.k.json
+        lines.append("## Task Overview")
         lines.append("")
-        lines.append(self.spec.description)
+        lines.append("**Specification:** See task-spec.k.json for features and constraints")
         lines.append("")
-
-        # Render features section
-        if self.spec.features:
-            lines.append("## Features")
-            lines.append("")
-            # Sort features by ID for consistent rendering
-            sorted_features = sorted(self.spec.features.items())
-            for feature_id, feature in sorted_features:
-                # Render feature heading at level 3 (under ## Features)
-                lines.append(f"### Feature: {feature.id}")
-                lines.append(f"**{feature.description}**")
-                lines.append("")
-
-                # Render goals if present
-                if feature.goals:
-                    lines.append("**Goals:**")
-                    for goal in feature.goals:
-                        lines.append(f"- {goal}")
-                    lines.append("")
-
-                # Render constraints directly at level 4, without section headers
-                if feature.constraints:
-                    for constraint_id, constraint in sorted(feature.constraints.items()):
-                        # Render constraint heading at level 4 (under ### feature)
-                        lines.append(f"#### {constraint.id}")
-                        lines.append(f"**Description:** {constraint.description}")
-
-                        # Render constraint-specific details
-                        if hasattr(constraint, 'cmd'):  # ConstraintBash
-                            lines.append(f"**Command:** `{constraint.cmd}`")
-
-                        lines.append("")
-
-                # Render metadata if present
-                if feature.metadata:
-                    lines.append("**Metadata:**")
-                    for key, value in feature.metadata.items():
-                        lines.append(f"- {key}: {value}")
-                    lines.append("")
 
         # Render iterations section
         if self.iterations:
@@ -400,24 +355,9 @@ class Task(RenderableModel):
         import re
         toc_lines = []
 
-        # Add Specification section
-        toc_lines.append("- [Specification](#specification)")
-
-        # Add Features section if there are features
-        if self.spec.features:
-            toc_lines.append("- [Features](#features)")
-            for feature_id in sorted(self.spec.features.keys()):
-                feature = self.spec.features[feature_id]
-                # Feature anchor: generated from full heading "Feature: {id}"
-                feature_anchor = self._generate_anchor(f"Feature: {feature_id}")
-                toc_lines.append(f"    - [Feature: {feature_id}](#{feature_anchor})")
-
-                # Add constraints for this feature (nested deeper with 6-space indentation)
-                if feature.constraints:
-                    for constraint_id in sorted(feature.constraints.keys()):
-                        # Constraint anchor: generated from ID only
-                        constraint_anchor = self._generate_anchor(constraint_id)
-                        toc_lines.append(f"      - [{constraint_id}](#{constraint_anchor})")
+        # Add Task Overview section
+        toc_lines.append("- [Task Overview](#task-overview)")
+        # Note: Features and specifications are now in task-spec.k.json
 
         # Add Iterations section if there are iterations
         if self.iterations:
