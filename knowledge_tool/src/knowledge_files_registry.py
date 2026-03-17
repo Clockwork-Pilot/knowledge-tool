@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 """Utility module for managing knowledge files registry."""
 
+import sys
 from pathlib import Path
 from typing import Set
-from config import KNOWN_KNOWLEDGE_FILES_PATH
+
+try:
+    from config import KNOWN_KNOWLEDGE_FILES_PATH
+except ImportError:
+    # When called from outside the project root, resolve config.py relative to this file:
+    # knowledge_tool/knowledge_tool/src/ -> up 4 levels -> project root
+    _project_root = Path(__file__).parent.parent.parent.parent
+    sys.path.insert(0, str(_project_root))
+    from config import KNOWN_KNOWLEDGE_FILES_PATH
 
 
 def _is_restricted_path(file_path: str) -> bool:

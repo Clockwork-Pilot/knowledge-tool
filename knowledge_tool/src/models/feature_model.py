@@ -2,7 +2,7 @@
 """Feature model - renderable feature with embedded constraints."""
 
 from typing import Any, Dict, Optional, Literal, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator, ValidationInfo
 
 # Support both package imports (.) and direct imports (models)
 try:
@@ -33,6 +33,36 @@ class Feature(RenderableModel):
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Metadata (created_at, updated_at, etc.)"
     )
+
+    @model_validator(mode='before')
+    @classmethod
+    def protect_proven_constraints_from_removal(cls, data: Any, info: ValidationInfo) -> Any:
+        """Raise an error if any proven-failed constraint is being removed.
+
+        Uses original_doc from validation context to detect removed constraints,
+        then delegates the error to ConstraintBash.validate_removal.
+        """
+        context = getattr(info, 'context', None) if info else None
+        if not context or not isinstance(data, dict):
+            return data
+
+        original_doc = context.get('original_doc', {})
+        feature_id = data.get('id')
+        if not feature_id or not original_doc:
+            return data
+
+        original_constraints = (
+            ((original_doc.get('spec') or {})
+            .get('features') or {})
+            .get(feature_id) or {}
+        ).get('constraints') or {}
+        new_constraints = data.get('constraints') or {}
+
+        for cid, constraint_data in original_constraints.items():
+            if cid not in new_constraints:
+                ConstraintBash.validate_removal(constraint_data)  # raises ValueError if fails_count > 0
+
+        return data
 
     @classmethod
     def create_default(cls) -> "Feature":

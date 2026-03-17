@@ -113,7 +113,7 @@ def apply_json_patch(
                 operation=operation
             )
 
-        validated_model = ModelClass(**patched_dict)
+        validated_model = ModelClass.model_validate(patched_dict, context={'original_doc': doc_dict})
         patched_dict = json.loads(validated_model.model_dump_json(exclude_none=True))
 
         # Check for tips from the model
@@ -244,7 +244,7 @@ def _error_pydantic_validation(validation_error: ValidationError, operation: str
     return ApplyPatchErrorResponse(
         error=f"Document validation failed: {validation_error.error_count()} error(s)",
         hint=hint,
-        details=validation_error.errors(),
+        details=json.loads(json.dumps(validation_error.errors(), default=str)),
         operation=operation
     )
 

@@ -26,6 +26,27 @@ class ConstraintBash(BaseModel):
     description: str = Field(..., description="Description of the constraint")
     fails_count: int = Field(default=0, description="Count of failed constraint executions; prevents cmd updates when > 0")
 
+    @classmethod
+    def validate_removal(cls, data: dict) -> None:
+        """Raise ValueError if this constraint cannot be removed.
+
+        A constraint with fails_count > 0 has proven failure history and must
+        be fixed to pass before it can be removed.
+
+        Args:
+            data: Raw constraint dict (from the document before patch)
+
+        Raises:
+            ValueError: If removal is forbidden due to fails_count > 0
+        """
+        fails_count = data.get("fails_count", 0)
+        if fails_count > 0:
+            cid = data.get("id", "unknown")
+            raise ValueError(
+                f"Cannot remove constraint '{cid}': fails_count={fails_count} > 0. "
+                f"Fix the constraint to pass first."
+            )
+
     def increment_fails_count(self) -> None:
         """Increment the fail count when constraint execution fails.
 
