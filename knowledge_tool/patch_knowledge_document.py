@@ -278,19 +278,19 @@ def main() -> None:
         print("  --schema   Print JSON schema for model type in document", file=sys.stderr)
         print("\nExamples:", file=sys.stderr)
         print(
-            '  python3 patch_knowledge_document.py doc.json \'[{"op": "replace", "path": "/label", "value": "new"}]\'',
+            '  python3 patch_knowledge_document.py doc.k.json \'[{"op": "replace", "path": "/label", "value": "new"}]\'',
             file=sys.stderr,
         )
         print(
-            '  cat patch.json | python3 patch_knowledge_document.py --stdin doc.json',
+            '  cat patch.json | python3 patch_knowledge_document.py --stdin doc.k.json',
             file=sys.stderr,
         )
         print(
-            '  python3 patch_knowledge_document.py doc.json --schema  # Print schema for model in doc.json',
+            '  python3 patch_knowledge_document.py doc.k.json --schema  # Print schema for model in doc.k.json',
             file=sys.stderr,
         )
         print(
-            '  python3 patch_knowledge_document.py doc.json  # Re-render only',
+            '  python3 patch_knowledge_document.py doc.k.json  # Re-render only',
             file=sys.stderr,
         )
         sys.exit(1)

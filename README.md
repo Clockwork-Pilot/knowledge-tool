@@ -31,10 +31,10 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # Apply JSON Patch to a document
-python /path/to/knowledge_tool/patch_knowledge_document.py doc.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
+python /path/to/knowledge_tool/patch_knowledge_document.py doc.k.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
 
 # Create new document
-python /path/to/knowledge_tool/patch_knowledge_document.py doc.json '[{"op": "add", "path": "/id", "value": "my_doc"}]'
+python /path/to/knowledge_tool/patch_knowledge_document.py doc.k.json '[{"op": "add", "path": "/id", "value": "my_doc"}]'
 ```
 
 ## Installation Note
