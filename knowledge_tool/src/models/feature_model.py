@@ -8,9 +8,11 @@ from pydantic import BaseModel, Field, model_validator, ValidationInfo
 try:
     from . import RenderableModel
     from .constraints_model import ConstraintBash
+    from .metadata_model import Metadata
 except ImportError:
     from models import RenderableModel
     from constraints_model import ConstraintBash
+    from metadata_model import Metadata
 
 
 class Feature(RenderableModel):
@@ -30,9 +32,7 @@ class Feature(RenderableModel):
     constraints: Optional[Dict[str, ConstraintBash]] = Field(
         None, description="Embedded constraints (bash commands)"
     )
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Metadata (created_at, updated_at, etc.)"
-    )
+    metadata: Optional[Metadata] = Field(None, description="Metadata (created_at, updated_at, etc.)")
 
     @model_validator(mode='before')
     @classmethod
@@ -68,7 +68,15 @@ class Feature(RenderableModel):
             if cid not in new_constraints:
                 ConstraintBash.validate_removal(constraint_data)  # raises ValueError if fails_count > 0
             else:
-                # Check for protected field changes on retained constraints
+                # PROTECTION GUARD — DO NOT REMOVE OR WEAKEN THIS BLOCK.
+                #
+                # Once a constraint has failed (fails_count > 0) it is "verified":
+                #   - cmd     : LOCKED. Changing cmd would silently invalidate the proof that
+                #               the constraint was ever red. Fix the implementation instead.
+                #   - fails_count: LOCKED via this path. The only legitimate way to increment
+                #               fails_count is through check_spec_constraints.py's special flow,
+                #               which writes the JSON directly (bypassing model validation).
+                #               Any other attempt to modify fails_count is treated as tampering.
                 fails_count = constraint_data.get('fails_count', 0)
                 if fails_count > 0:
                     new_c = new_constraints[cid]
@@ -151,7 +159,7 @@ class Feature(RenderableModel):
         if self.metadata:
             lines.append("## Metadata")
             lines.append("")
-            for key, value in self.metadata.items():
+            for key, value in self.metadata.model_dump(exclude_none=True).items():
                 lines.append(f"- {key}: {value}")
             lines.append("")
 

@@ -80,7 +80,7 @@ class TestTaskWithFeatures:
         """Test Task with iterations (features are now in task-spec.k.json)."""
         from models import Iteration
 
-        iteration = Iteration(id="iteration_1")
+        iteration = Iteration(id="iteration_1", summary="Test iteration")
         task = Task(
             id="task1",
             iterations={"iteration_1": iteration}
@@ -94,7 +94,7 @@ class TestTaskWithFeatures:
         """Test Task serializes without spec field (features in task-spec.k.json)."""
         from models import Iteration
 
-        iteration = Iteration(id="iteration_1")
+        iteration = Iteration(id="iteration_1", summary="Test iteration")
         task = Task(id="task1", iterations={"iteration_1": iteration})
 
         data = task.model_dump()

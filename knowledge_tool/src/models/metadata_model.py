@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Unified Metadata model for all Pydantic models."""
 
-from pydantic import BaseModel, Field
+from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class Metadata(BaseModel):
@@ -17,7 +18,7 @@ class Metadata(BaseModel):
     during postprocessing to ensure consistency.
     """
 
-    created_at: str = Field(..., description="ISO8601 timestamp when model was created")
+    created_at: Optional[str] = Field(None, description="ISO8601 timestamp when model was created")
     ver: int = Field(
         default=0,
         exclude=True,
@@ -29,7 +30,4 @@ class Metadata(BaseModel):
         description="ISO8601 timestamp of last update (set on parent changes, cannot be modified via snapshot)"
     )
 
-    class Config:
-        """Pydantic config for Metadata model."""
-        # Allow excluding fields even though they have defaults
-        validate_default = True
+    model_config = ConfigDict(extra='allow', validate_default=True)

@@ -2,8 +2,8 @@
 """Constraint execution result models."""
 
 from datetime import datetime
-from typing import Optional, Dict, Union, Literal
-from pydantic import BaseModel, Field
+from typing import Optional, Dict, List, Union, Literal
+from pydantic import BaseModel, Field, model_validator, model_serializer
 
 # Support both package imports (.) and direct imports (models)
 try:
@@ -34,20 +34,15 @@ class FeatureResult(BaseModel):
 class FeaturesStats(BaseModel):
     """Statistics tracking feature constraint validation results for an iteration."""
 
-    features_checks: Dict[str, bool] = Field(
-        ...,
-        description="Complete list of all task features with pass/fail status (True=all constraints pass, False=any constraint failed)"
-    )
     failed: Dict[str, FeatureResult] = Field(
         default_factory=dict,
-        description="Only failed features with their FeatureResult details (features containing failed constraints)"
+        description="Failed features with their FeatureResult details. Passing features are absent."
     )
 
     def diff(self, previous: Optional["FeaturesStats"]) -> "FeaturesStatsDiff":
         """Calculate difference between this and previous features stats.
 
-        Tracks which features improved (fail->pass) or regressed (pass->fail),
-        and which are still failing.
+        Uses only the failed dict keys — a feature absent from failed is passing.
 
         Args:
             previous: Previous iteration's FeaturesStats (None if first iteration)
@@ -56,28 +51,32 @@ class FeaturesStats(BaseModel):
             FeaturesStatsDiff with improved, regressed, and still_failing features
         """
         if previous is None:
-            # First iteration - all currently failing are new failures
             return FeaturesStatsDiff(
                 improved={},
                 regressed={},
-                still_failing=set(self.failed.keys())
+                still_failing={
+                    fid: list(fr.constraints_results.keys())
+                    for fid, fr in self.failed.items()
+                }
             )
 
         improved = {}
         regressed = {}
 
-        # Check for improvements: was failing, now passing
-        for feature_id in previous.failed.keys():
-            if feature_id in self.features_checks and self.features_checks[feature_id]:
-                improved[feature_id] = True
+        # Improved: was failing, now passing (absent from current failed)
+        for feature_id, feature_result in previous.failed.items():
+            if feature_id not in self.failed:
+                improved[feature_id] = list(feature_result.constraints_results.keys())
 
-        # Check for regressions: was passing, now failing
-        for feature_id, was_passing in previous.features_checks.items():
-            if was_passing and feature_id in self.features_checks and not self.features_checks[feature_id]:
-                regressed[feature_id] = True
+        # Regressed: was passing (absent from previous failed), now failing
+        for feature_id, feature_result in self.failed.items():
+            if feature_id not in previous.failed:
+                regressed[feature_id] = list(feature_result.constraints_results.keys())
 
-        # Still failing: in current failed dict and was in previous failed
-        still_failing = set(self.failed.keys()).intersection(set(previous.failed.keys()))
+        still_failing = {
+            fid: list(self.failed[fid].constraints_results.keys())
+            for fid in set(self.failed.keys()).intersection(previous.failed.keys())
+        }
 
         return FeaturesStatsDiff(
             improved=improved,
@@ -89,18 +88,30 @@ class FeaturesStats(BaseModel):
 class FeaturesStatsDiff(BaseModel):
     """Tracks changes in feature constraint validation between iterations."""
 
-    improved: Dict[str, bool] = Field(
+    improved: Dict[str, List[str]] = Field(
         default_factory=dict,
-        description="Features that improved (fail->pass since previous iteration)"
+        description="Features that improved (fail->pass): feature_id -> list of constraint IDs"
     )
-    regressed: Dict[str, bool] = Field(
+    regressed: Dict[str, List[str]] = Field(
         default_factory=dict,
-        description="Features that regressed (pass->fail since previous iteration)"
+        description="Features that regressed (pass->fail): feature_id -> list of constraint IDs"
     )
-    still_failing: set[str] = Field(
-        default_factory=set,
-        description="Features still failing from previous iteration"
+    still_failing: Dict[str, List[str]] = Field(
+        default_factory=dict,
+        description="Features still failing: feature_id -> list of constraint IDs"
     )
+
+    @model_serializer
+    def serialize(self) -> dict:
+        """Omit empty sub-dicts."""
+        d = {}
+        if self.improved:
+            d['improved'] = self.improved
+        if self.regressed:
+            d['regressed'] = self.regressed
+        if self.still_failing:
+            d['still_failing'] = self.still_failing
+        return d
 
 
 class ChecksResults(RenderableModel):

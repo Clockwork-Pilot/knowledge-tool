@@ -4,7 +4,12 @@
 import json
 import re
 from typing import Any, Dict, Optional, Literal, List
-from pydantic import BaseModel, Field, model_validator
+
+try:
+    from .metadata_model import Metadata
+except ImportError:
+    from metadata_model import Metadata
+from pydantic import BaseModel, Field, model_validator, model_serializer
 
 # Support both package imports (.) and direct imports (models)
 try:
@@ -43,12 +48,11 @@ class Iteration(RenderableModel):
     """Represents a single iteration of a task with metrics."""
 
     type: Literal["Iteration"] = "Iteration"
-    model_version: int = 1
+    model_version: int = 2
     id: str = Field(..., description="Unique iteration identifier")
+    summary: str = Field(..., description="Human-readable summary of what was done in this iteration (max 100 chars)")
     children: Optional[Dict[str, Doc]] = Field(None, description="Child documents for iteration sections")
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Iteration metadata (created_at, updated_at, etc.)"
-    )
+    metadata: Optional[Metadata] = Field(None, description="Iteration metadata (created_at, updated_at, etc.)")
     code_stats: Optional[CodeStats] = Field(None, description="Code change statistics")
     tests_stats: Optional[TaskTestMetrics] = Field(None, description="Test execution statistics")
     coverage_stats_by_tests: Optional[Dict[str, int]] = Field(
@@ -60,6 +64,59 @@ class Iteration(RenderableModel):
     features_stats_diff: Optional[FeaturesStatsDiff] = Field(
         None, description="Changes in feature validation results compared to previous iteration"
     )
+
+    @model_validator(mode='before')
+    @classmethod
+    def migrate_v1_to_v2(cls, data: Any) -> Any:
+        """Migrate Iteration from model_version 1 to 2.
+
+        v1 -> v2 changes in FeaturesStatsDiff:
+          - still_failing: set[str] (stored as list) -> Dict[str, List[str]]
+          - improved:      Dict[str, bool]            -> Dict[str, List[str]]
+          - regressed:     Dict[str, bool]            -> Dict[str, List[str]]
+        """
+        if not isinstance(data, dict):
+            return data
+        if data.get('model_version', 1) >= 2:
+            return data
+
+        diff = data.get('features_stats_diff')
+        if isinstance(diff, dict):
+            # still_failing: list -> dict
+            sf = diff.get('still_failing')
+            if isinstance(sf, list):
+                diff['still_failing'] = {fid: [] for fid in sf}
+
+            # improved: Dict[str, bool] -> Dict[str, List[str]]
+            imp = diff.get('improved')
+            if isinstance(imp, dict):
+                diff['improved'] = {k: [] for k, v in imp.items() if not isinstance(v, list)}
+                diff['improved'].update({k: v for k, v in imp.items() if isinstance(v, list)})
+
+            # regressed: Dict[str, bool] -> Dict[str, List[str]]
+            reg = diff.get('regressed')
+            if isinstance(reg, dict):
+                diff['regressed'] = {k: [] for k, v in reg.items() if not isinstance(v, list)}
+                diff['regressed'].update({k: v for k, v in reg.items() if isinstance(v, list)})
+
+        data['model_version'] = 2
+        return data
+
+    @model_validator(mode='after')
+    def normalize_empty_stats(self) -> 'Iteration':
+        """Nullify stats fields when they carry no information."""
+        if self.features_stats is not None and not self.features_stats.failed:
+            self.features_stats = None
+        if self.features_stats_diff is not None:
+            d = self.features_stats_diff
+            if not d.improved and not d.regressed and not d.still_failing:
+                self.features_stats_diff = None
+        return self
+
+    @model_serializer(mode='wrap')
+    def serialize(self, handler) -> dict:
+        """Serialize, dropping None fields."""
+        return {k: v for k, v in handler(self).items() if v is not None}
 
     @classmethod
     def create_default(cls) -> "Iteration":
@@ -105,7 +162,7 @@ class Iteration(RenderableModel):
         if self.metadata:
             lines.append("**Metadata:**")
             lines.append("")
-            for key, value in self.metadata.items():
+            for key, value in self.metadata.model_dump(exclude_none=True).items():
                 lines.append(f"- {key}: {value}")
             lines.append("")
 
@@ -138,22 +195,8 @@ class Iteration(RenderableModel):
             lines.append("**Feature Constraint Validation Stats:**")
             lines.append("")
 
-            # Count passing and failing features
-            passing_count = sum(1 for v in self.features_stats.features_checks.values() if v)
-            failing_count = sum(1 for v in self.features_stats.features_checks.values() if not v)
-            total_count = len(self.features_stats.features_checks)
-
-            # Overall summary
-            lines.append(f"- **Overall:** {passing_count}/{total_count} features passed")
-            if failing_count > 0:
-                lines.append(f"- **Failed:** {failing_count} features with constraint violations")
-            lines.append("")
-
-            # List all features
-            lines.append("**Feature Status:**")
-            for feature_id, passed in sorted(self.features_stats.features_checks.items()):
-                status = "✓ PASS" if passed else "✗ FAIL"
-                lines.append(f"- {feature_id}: {status}")
+            failing_count = len(self.features_stats.failed)
+            lines.append(f"- **Failed:** {failing_count} features with constraint violations" if failing_count > 0 else "- **All features passing**")
             lines.append("")
 
             # Detail failed features if any

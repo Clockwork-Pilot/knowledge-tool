@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional, Literal
 from pydantic import BaseModel
 
 from .base_model import RenderableModel
+from .metadata_model import Metadata
 
 
 class Opts(BaseModel):
@@ -25,7 +26,7 @@ class Doc(RenderableModel):
     id: str
     label: str
     description: Optional[str] = None
-    metadata: Dict[str, Any] = {}
+    metadata: Optional[Metadata] = None
     opts: Optional[Opts] = None
     children: Optional[Dict[str, "Doc"]] = None
 
@@ -372,7 +373,7 @@ class Doc(RenderableModel):
 
         # Check this document's metadata
         if self.metadata:
-            metadata_lower = {k.lower(): k for k, v in self.metadata.items()}  # Map to original key
+            metadata_lower = {k.lower(): k for k, v in self.metadata.model_dump(exclude_none=True).items()}  # Map to original key
 
             # Check for usage/command in metadata - should be in code attr
             # for key_lower, key_orig in metadata_lower.items():

@@ -187,6 +187,7 @@ class TestIterationRender:
 
         iteration = Iteration(
             id="iteration_1",
+            summary="Fixed authentication bug and improved performance",
             children={"summary": child_doc}
         )
 
@@ -199,7 +200,7 @@ class TestIterationRender:
         """Test rendering an Iteration without children."""
         from models import Iteration
 
-        iteration = Iteration(id="iteration_1")
+        iteration = Iteration(id="iteration_1", summary="Test iteration")
 
         rendered = iteration.render()
 
@@ -271,8 +272,8 @@ class TestTaskRender:
 
         spec = Spec(version=1, description="Task specification")
 
-        iteration1 = Iteration(id="iteration_1")
-        iteration2 = Iteration(id="iteration_2")
+        iteration1 = Iteration(id="iteration_1", summary="First iteration")
+        iteration2 = Iteration(id="iteration_2", summary="Second iteration")
 
         task = Task(
             id="task_1",
@@ -379,6 +380,7 @@ class TestTaskRender:
 
         iteration1 = Iteration(
             id="iteration_1",
+            summary="Iteration with children TOC",
             children={"section1": child_section}
         )
 
