@@ -67,6 +67,23 @@ class Feature(RenderableModel):
         for cid, constraint_data in original_constraints.items():
             if cid not in new_constraints:
                 ConstraintBash.validate_removal(constraint_data)  # raises ValueError if fails_count > 0
+            else:
+                # Check for protected field changes on retained constraints
+                fails_count = constraint_data.get('fails_count', 0)
+                if fails_count > 0:
+                    new_c = new_constraints[cid]
+                    new_cmd = new_c.get('cmd') if isinstance(new_c, dict) else None
+                    original_cmd = constraint_data.get('cmd')
+                    new_fails_count = new_c.get('fails_count', 0) if isinstance(new_c, dict) else 0
+
+                    cmd_changed = original_cmd and new_cmd and original_cmd != new_cmd
+                    fails_count_changed = fails_count != new_fails_count
+
+                    if cmd_changed or fails_count_changed:
+                        raise ValueError(
+                            f"Cannot update constraint '{cid}': fails_count={fails_count} > 0. "
+                            f"Fix the constraint to pass first."
+                        )
 
         return data
 

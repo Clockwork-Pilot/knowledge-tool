@@ -66,75 +66,12 @@ class ConstraintBash(BaseModel):
     @model_validator(mode='before')
     @classmethod
     def protect_cmd_when_failed(cls, data: Any, info: ValidationInfo) -> Any:
-        """Protect constraint cmd and description when fails_count > 0.
+        """Protect constraint cmd and fails_count when fails_count > 0.
 
-        When fails_count > 0 (constraint has failed), the cmd and description fields are locked.
-        A constraint with failure history must be fixed to pass before allowing modifications.
-
-        Uses original_doc from validation context to detect modifications.
-
-        Raises:
-            ValueError: If attempting to modify cmd or description when fails_count > 0
+        Protection is enforced at the Feature level (feature_model.py) where the
+        original constraints are scoped to the specific feature. This validator is
+        a no-op kept for structural clarity.
         """
-        context = getattr(info, 'context', None) if info else None
-        if not context or not isinstance(data, dict):
-            return data
-
-        original_doc = context.get('original_doc', {})
-        if not original_doc:
-            return data
-
-        constraint_id = data.get('id')
-        if not constraint_id:
-            return data
-
-        # Search for the original constraint in either Spec or Task document structure
-        original_constraint = None
-        doc_type = original_doc.get('type')
-
-        if doc_type == 'Spec':
-            # Search through all features in Spec document
-            for feature in (original_doc.get('features') or {}).values():
-                if isinstance(feature, dict):
-                    for constraint_data in feature.get('constraints', {}).values():
-                        if isinstance(constraint_data, dict) and constraint_data.get('id') == constraint_id:
-                            original_constraint = constraint_data
-                            break
-                if original_constraint:
-                    break
-        else:
-            # Task document structure (legacy)
-            for feature in ((original_doc.get('spec') or {}).get('features') or {}).values():
-                if isinstance(feature, dict):
-                    for constraint_data in feature.get('constraints', {}).values():
-                        if isinstance(constraint_data, dict) and constraint_data.get('id') == constraint_id:
-                            original_constraint = constraint_data
-                            break
-                if original_constraint:
-                    break
-
-        if not original_constraint:
-            return data
-
-        fails_count = original_constraint.get('fails_count', 0)
-        if fails_count > 0:
-            original_cmd = original_constraint.get('cmd')
-            original_fails_count = original_constraint.get('fails_count', 0)
-            new_cmd = data.get('cmd')
-            new_fails_count = data.get('fails_count', 0)
-
-            # Protect cmd and fails_count when constraint is locked (fails_count > 0)
-            # Description is allowed to change freely (it's just documentation)
-            cmd_changed = original_cmd and new_cmd and original_cmd != new_cmd
-            fails_count_changed = original_fails_count != new_fails_count
-
-            # Block changes to protected fields: cmd and fails_count
-            if cmd_changed or fails_count_changed:
-                raise ValueError(
-                    f"Cannot update constraint '{constraint_id}': fails_count={fails_count} > 0. "
-                    f"Fix the constraint to pass first."
-                )
-
         return data
 
     def render(self, include_toc: bool = True) -> str:
