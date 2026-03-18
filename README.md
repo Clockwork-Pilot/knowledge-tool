@@ -1,4 +1,4 @@
-# y2-knowledge_document_tools
+# y2-knowledge_tool
 
 A reusable knowledge base system with JSON Patch operations, validation, and automatic markdown rendering.
 
