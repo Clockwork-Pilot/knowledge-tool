@@ -292,10 +292,10 @@ ALWAYS use apply_json_patch to modify documents. Never edit JSON files directly.
   - Atomic writes prevent partial/corrupted states
 
 ### Wrong Way
-❌ Directly editing knowledge_tool.json with a text editor or file tools
+❌ Directly editing knowledge_tool.k.json with a text editor or file tools
 
 ### Right Way
-✓ python tools/apply_json_patch.py knowledge_tool.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
+✓ python tools/apply_json_patch.py knowledge_tool.k.json '[{"op": "replace", "path": "/label", "value": "Updated"}]'
 
 ## Architecture
 API-first design with JSON Patch operations
@@ -363,8 +363,8 @@ remove read-only → exclusive write → atomic rename → restore read-only
 Files are protected with read-only attributes after writing to prevent accidental corruption or modification. This applies to both JSON knowledge documents and their auto-rendered markdown pairs.
 
 ```
-knowledge_tool.json
-knowledge_tool.md
+knowledge_tool.k.json
+knowledge_tool.k.md
 ```
 
 #### Purpose

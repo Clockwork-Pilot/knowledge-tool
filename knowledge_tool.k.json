@@ -1,5 +1,6 @@
 {
   "type": "Doc",
+  "model_version": 1,
   "id": "knowledge_tools",
   "label": "Knowledge Tools",
   "description": "Updated description",
@@ -14,6 +15,7 @@
   "children": {
     "architecture": {
       "type": "Doc",
+      "model_version": 1,
       "id": "architecture",
       "label": "Architecture",
       "description": "API-first design with JSON Patch operations",
@@ -21,6 +23,7 @@
       "children": {
         "api": {
           "type": "Doc",
+          "model_version": 1,
           "id": "api",
           "label": "Json Patch",
           "description": "RFC 6902 JSON Patch standard for describing modifications to JSON documents.\n\n**File:** tools/apply_json_patch.py\n\n**Standard:** RFC 6902\n\n**Operations:**\n- add - Insert or replace value\n- remove - Delete value at path\n- replace - Replace value at path\n- move - Move value from one path to another\n- copy - Copy value from one path to another\n- test - Assert value equals expected before applying",
@@ -44,6 +47,7 @@
         },
         "rendering": {
           "type": "Doc",
+          "model_version": 1,
           "id": "rendering",
           "label": "Document Rendering",
           "description": "Automatic markdown generation on patch application using pluggable RenderableModel classes. Handles file I/O for all model types (not a public API)",
@@ -54,6 +58,7 @@
         },
         "workflow": {
           "type": "Doc",
+          "model_version": 1,
           "id": "workflow",
           "label": "Workflow",
           "description": "Complete knowledge tool operation workflow from API call to markdown generation.\n\n**Main Flow:**\nread JSON \u2192 validate patch \u2192 apply in memory \u2192 validate schema \u2192 write with protection \u2192 render markdown\n\n**File Protection (within Write step):**\nremove read-only \u2192 exclusive write \u2192 atomic rename \u2192 restore read-only",
@@ -76,11 +81,12 @@
         },
         "file_protection": {
           "type": "Doc",
+          "model_version": 1,
           "id": "file_protection",
           "label": "File Protection Purpose",
           "description": "Files are protected with read-only attributes after writing to prevent accidental corruption or modification. This applies to both JSON knowledge documents and their auto-rendered markdown pairs.",
           "metadata": {
-            "code": "knowledge_tool.json\nknowledge_tool.md",
+            "code": "knowledge_tool.k.json\nknowledge_tool.k.md",
             "purpose": [
               "Prevent accidental overwrites of validated JSON data",
               "Ensure JSON and MD files always stay in sync (both locked together)",
@@ -99,6 +105,7 @@
     },
     "testing": {
       "type": "Doc",
+      "model_version": 1,
       "id": "testing",
       "label": "Testing",
       "description": "Comprehensive test suite with 19 tests covering all functionality.",
@@ -108,6 +115,7 @@
     },
     "api": {
       "type": "Doc",
+      "model_version": 1,
       "id": "api",
       "label": "API",
       "description": "Public interfaces for knowledge tools: command-line scripts and Python functions",
@@ -119,6 +127,7 @@
       "children": {
         "scripts": {
           "type": "Doc",
+          "model_version": 1,
           "id": "scripts",
           "label": "Scripts",
           "description": "Command-line script interfaces",
@@ -130,6 +139,7 @@
           "children": {
             "apply_json_patch_script": {
               "type": "Doc",
+              "model_version": 1,
               "id": "apply_json_patch_script",
               "label": "apply_json_patch.py",
               "description": "Apply JSON Patch operations to knowledge documents from command line with automatic markdown rendering. Supports both command-line arguments and stdin input to avoid shell escaping issues. Works with built-in models and pluggable custom models configured in knowledge_config.yaml.",
@@ -139,6 +149,7 @@
               "children": {
                 "stdin_support": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "stdin_support",
                   "label": "Using Stdin for Complex Patches",
                   "description": "For complex JSON patches with many nested quotes, pass the patch via stdin to avoid shell escaping issues.",
@@ -152,6 +163,7 @@
         },
         "functions": {
           "type": "Doc",
+          "model_version": 1,
           "id": "functions",
           "label": "Functions",
           "description": "Python function interfaces for programmatic use",
@@ -159,6 +171,7 @@
           "children": {
             "apply_json_patch_func": {
               "type": "Doc",
+              "model_version": 1,
               "id": "apply_json_patch_func",
               "label": "apply_json_patch()",
               "description": "Apply JSON Patch to document file with validation and automatic markdown rendering.",
@@ -182,6 +195,7 @@
               "children": {
                 "rendering_behavior": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "rendering_behavior",
                   "label": "Rendering Behavior",
                   "description": "When apply_json_patch succeeds, it always attempts to regenerate the markdown file.",
@@ -210,6 +224,7 @@
             },
             "pluggable_models": {
               "type": "Doc",
+              "model_version": 1,
               "id": "pluggable_models",
               "label": "Pluggable Models",
               "description": "Extend apply_json_patch with custom model types by configuring external model definitions in knowledge_config.yaml. Models are auto-discovered by searching for knowledge_config.yaml in the project directory hierarchy.",
@@ -217,6 +232,7 @@
               "children": {
                 "overview": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "pluggable_models_overview",
                   "label": "Overview",
                   "description": "Pluggable models allow you to define custom document types beyond the built-in Doc model. External models are loaded dynamically and work seamlessly with apply_json_patch validation and rendering.",
@@ -237,6 +253,7 @@
                 },
                 "usage": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "pluggable_models_usage",
                   "label": "Usage",
                   "description": "How to use pluggable models with apply_json_patch.",
@@ -248,6 +265,7 @@
                 },
                 "creating_models": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "pluggable_models_creating",
                   "label": "Creating Custom Models",
                   "description": "How to create a pluggable model.",
@@ -266,6 +284,7 @@
             },
             "opts_configuration": {
               "type": "Doc",
+              "model_version": 1,
               "id": "opts_configuration",
               "label": "Opts Configuration",
               "description": "Non-displayable rendering options for document nodes",
@@ -273,6 +292,7 @@
               "children": {
                 "render_priority_field": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "render_priority_field",
                   "label": "render_priority Field",
                   "description": "When true, renders node before siblings with render_priority=false",
@@ -286,6 +306,7 @@
         },
         "configuration": {
           "type": "Doc",
+          "model_version": 1,
           "id": "configuration",
           "label": "Configuration",
           "description": "Knowledge tool models are configured via knowledge_config.yaml file. The tool automatically searches for this file in the following locations, in priority order.",
@@ -293,6 +314,7 @@
           "children": {
             "config_file": {
               "type": "Doc",
+              "model_version": 1,
               "id": "config_file",
               "label": "knowledge_config.yaml",
               "description": "YAML configuration file that defines pluggable model directories for loading custom RenderableModel implementations.\n\n**File Location:**\n- Default: Same directory as apply_json_patch.py script\n- Or: Project root when used as dependency\n- Or: Use KNOWLEDGE_TOOL_CONFIG_ROOT environment variable to override\n\n**Content:** Single key `pluggable_models_dirs` with list of relative or absolute paths to directories containing model definitions.\n\n**Paths:** Can be relative (to config file location) or absolute paths to model directories.",
@@ -302,6 +324,7 @@
             },
             "env_vars": {
               "type": "Doc",
+              "model_version": 1,
               "id": "env_vars",
               "label": "Environment Variables",
               "description": "Control where knowledge_config.yaml is searched for.",
@@ -319,6 +342,7 @@
             },
             "auto_discovery": {
               "type": "Doc",
+              "model_version": 1,
               "id": "auto_discovery",
               "label": "Automatic Discovery",
               "description": "When used as a Claude plugin or in a Claude project, knowledge_config.yaml is automatically found without manual configuration by searching upward from the current working directory.",
@@ -330,6 +354,7 @@
             },
             "config_file_format": {
               "type": "Doc",
+              "model_version": 1,
               "id": "config_file_format",
               "label": "Configuration File Format",
               "description": "The knowledge_config.yaml file configures pluggable model directories for the knowledge tool. Place this file in the same directory as apply_json_patch.py script, or set KNOWLEDGE_TOOL_CONFIG_ROOT environment variable to override the config location.\n\nThe knowledge tool always loads built-in models. External models from pluggable_models_dirs are merged with built-in models.",
@@ -340,6 +365,7 @@
               "children": {
                 "built_in_models": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "config_built_in_models",
                   "label": "Built-in Models",
                   "description": "Built-in models are always loaded and available:\n- Doc: Default document model with hierarchical children\n- Task: Task with plan and iterations (from lifecycle_tool)\n- Iteration: Task iteration with metrics",
@@ -347,6 +373,7 @@
                 },
                 "pluggable_directories": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "config_pluggable_dirs",
                   "label": "Pluggable Models Directories",
                   "description": "List of directories containing custom/pluggable knowledge models. Paths are relative to the config file location.",
@@ -361,6 +388,7 @@
                 },
                 "model_merging_strategy": {
                   "type": "Doc",
+                  "model_version": 1,
                   "id": "config_model_merging",
                   "label": "Model Merging Strategy",
                   "description": "External models from pluggable_models_dirs are merged with built-in models. If a custom model has the same name as a built-in model, the custom model takes precedence and overrides the built-in one.",
@@ -374,6 +402,7 @@
     },
     "file_modification_workflow": {
       "type": "Doc",
+      "model_version": 1,
       "id": "file_modification_workflow",
       "label": "File Modification Workflow",
       "description": "How to properly modify knowledge documents using the tool. Models are loaded automatically from knowledge_config.yaml by searching the project directory hierarchy.",
@@ -391,8 +420,8 @@
           "Provides error handling and helpful hints",
           "Atomic writes prevent partial/corrupted states"
         ],
-        "wrong_way": "\u274c Directly editing knowledge_tool.json with a text editor or file tools",
-        "right_way": "\u2713 python tools/apply_json_patch.py knowledge_tool.json '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"Updated\"}]'"
+        "wrong_way": "\u274c Directly editing knowledge_tool.k.json with a text editor or file tools",
+        "right_way": "\u2713 python tools/apply_json_patch.py knowledge_tool.k.json '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"Updated\"}]'"
       },
       "opts": {
         "render_priority": true,
@@ -401,6 +430,7 @@
     },
     "installation_note": {
       "type": "Doc",
+      "model_version": 1,
       "id": "installation_note",
       "label": "Installation Note",
       "description": "Do NOT install this package. Use the scripts directly without installation. The knowledge_tool is designed to work as-is without requiring package installation via pip. Simply run the scripts directly from their location with: python /path/to/knowledge_tool/apply_json_patch.py doc.json '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"Updated\"}]'. The script automatically locates its dependencies in the src/ directory without requiring installation. This approach works from any directory, requires only Python dependencies installed via pip install -r requirements.txt, needs no package installation, and provides a cleaner project structure.",
@@ -411,6 +441,7 @@
     },
     "callable_api": {
       "type": "Doc",
+      "model_version": 1,
       "id": "callable_api",
       "label": "Python API Usage",
       "description": "The apply_json_patch function is a clean, simple callable that can be used directly from Python code without any installation. It works in any project by simply importing and calling the function.",
@@ -421,6 +452,7 @@
       "children": {
         "function_signature": {
           "type": "Doc",
+          "model_version": 1,
           "id": "function_signature",
           "label": "Function Signature",
           "description": "apply_json_patch(document_path: str, json_patch: Optional[str] = None) -> Optional[ApplyPatchErrorResponse]\n\nSimple two-parameter function:\n- document_path: String path to JSON file (can be relative or absolute)\n- json_patch: JSON Patch operations string (RFC 6902), or None to just re-render\n\nReturns None on success, or ApplyPatchErrorResponse with error details on failure.",
@@ -428,6 +460,7 @@
         },
         "usage_examples": {
           "type": "Doc",
+          "model_version": 1,
           "id": "usage_examples",
           "label": "Usage Examples",
           "description": "# Create or patch a document\nfrom apply_json_patch import apply_json_patch\n\n# Patch existing document\nerror = apply_json_patch('doc.json', '[{\"op\": \"replace\", \"path\": \"/label\", \"value\": \"new\"}]')\nif error:\n    print(f\"Error: {error.error}\")\nelse:\n    print(\"Success\")\n\n# Create new document by providing patch for non-existent file\nerror = apply_json_patch('new_doc.json', '[{\"op\": \"add\", \"path\": \"/id\", \"value\": \"doc1\"}]')\n\n# Re-render existing document without patching\nerror = apply_json_patch('doc.json', None)",
@@ -435,6 +468,7 @@
           "children": {
             "hello_world_example": {
               "type": "Doc",
+              "model_version": 1,
               "id": "hello_world_example",
               "label": "Hello World Example",
               "description": "Complete JSON payload showing typical document structure with table of contents rendering enabled and 2 nested children",
@@ -480,6 +514,7 @@
         },
         "from_other_projects": {
           "type": "Doc",
+          "model_version": 1,
           "id": "from_other_projects",
           "label": "Using from Other Projects",
           "description": "To use apply_json_patch from another project:\n\n1. Copy the apply_json_patch.py file to your project\n2. Ensure jsonpatch and pydantic are installed: pip install jsonpatch pydantic\n3. Import and use: from apply_json_patch import apply_json_patch\n\nThe function is self-contained and works without any installation or sys.path manipulation on the caller side. The script handles its own internal path setup automatically.",
@@ -487,6 +522,7 @@
         },
         "error_handling": {
           "type": "Doc",
+          "model_version": 1,
           "id": "error_handling",
           "label": "Error Handling",
           "description": "The function returns None on success, or an ApplyPatchErrorResponse object on error. Check the response to get detailed error information:\n\nif result := apply_json_patch(path, patch):\n    print(result.error)\n    if result.hint:\n        print(result.hint)\n    if result.details:\n        print(result.details)",
