@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Unified Metadata model for all Pydantic models."""
 
+from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -31,3 +32,8 @@ class Metadata(BaseModel):
     )
 
     model_config = ConfigDict(extra='allow', validate_default=True)
+
+    @classmethod
+    def now(cls, **kwargs) -> "Metadata":
+        """Create Metadata with created_at set to the current ISO timestamp."""
+        return cls(created_at=datetime.now().isoformat(), **kwargs)

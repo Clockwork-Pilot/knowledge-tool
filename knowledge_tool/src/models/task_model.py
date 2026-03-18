@@ -35,6 +35,10 @@ class TaskTestMetrics(BaseModel):
 
     passed: int = Field(default=0, description="Number of tests passed")
     total: int = Field(default=0, description="Total number of tests")
+    failed_tests: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Failed test name -> shrunk error message (max 100 chars)"
+    )
 
     @property
     def pass_rate(self) -> float:

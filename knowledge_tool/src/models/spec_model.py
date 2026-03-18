@@ -130,7 +130,7 @@ class Spec(RenderableModel):
                 # Render metadata if present
                 if feature.metadata:
                     lines.append("**Metadata:**")
-                    for key, value in feature.metadata.items():
+                    for key, value in feature.metadata.model_dump(exclude_none=True).items():
                         lines.append(f"- {key}: {value}")
                     lines.append("")
 
