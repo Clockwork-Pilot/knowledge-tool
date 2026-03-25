@@ -45,7 +45,7 @@ def get_registry_path() -> Path:
     """Get the path to the knowledge files registry.
 
     Returns:
-        Path object pointing to protected_files.txt in plugin root.
+        Path object pointing to protected_files.txt in project root.
     """
     return KNOWN_KNOWLEDGE_FILES_PATH
 
