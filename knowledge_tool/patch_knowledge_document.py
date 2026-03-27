@@ -15,6 +15,12 @@ _src_dir = _pkg_dir / "src"
 if str(_src_dir) not in sys.path:
     sys.path.insert(0, str(_src_dir))
 
+# INSERT HERE — before any src imports touch config.py:
+if 'CLAUDE_PROJECT_ROOT' not in os.environ and len(sys.argv) > 1:
+    _doc = Path(sys.argv[1]).resolve()
+    if _doc.parent.exists():
+        os.environ['CLAUDE_PROJECT_ROOT'] = str(_doc.parent)
+
 # Now we can import from src modules
 from models import Doc
 from common.response import ApplyPatchErrorResponse
