@@ -19,6 +19,7 @@ class ConstraintBashResult(BaseModel):
     verdict: bool = Field(..., description="Whether the constraint passed (True) or failed (False)")
     shrunken_output: Optional[str] = Field(None, description="Truncated stdout/stderr output")
     timestamp: Optional[datetime] = Field(None, description="When the constraint was executed")
+    duration: Optional[float] = Field(None, description="Execution duration in seconds")
     fails_count: int = Field(default=0, description="Number of times this constraint has failed")
 
 
@@ -179,6 +180,8 @@ class ChecksResults(RenderableModel):
                             lines.append(f"**Verdict:** {verdict_str}")
                             if result.timestamp:
                                 lines.append(f"**Timestamp:** {result.timestamp.isoformat()}")
+                            if result.duration is not None:
+                                lines.append(f"**Duration:** {result.duration:.2f}s")
                             if result.shrunken_output:
                                 lines.append(f"**Output:** `{result.shrunken_output}`")
                             lines.append("")

@@ -98,20 +98,22 @@ class ConstraintBash(BaseModel):
         """
         return [f"- [{self.id}](#{self.id.lower().replace('_', '-')})"]
 
-    def create_result(self, verdict: bool, output: str) -> ConstraintBashResult:
+    def create_result(self, verdict: bool, output: str, duration: Optional[float] = None) -> ConstraintBashResult:
         """Create result from bash execution.
 
         Args:
             verdict: True if command passed (exit code 0), False otherwise
             output: Command stdout/stderr output
+            duration: Execution duration in seconds
 
         Returns:
-            ConstraintBashResult with verdict, output, and current fails_count
+            ConstraintBashResult with verdict, output, duration, and current fails_count
         """
         return ConstraintBashResult(
             constraint_id=self.id,
             verdict=verdict,
             shrunken_output=output[:100],
             timestamp=datetime.now(),
+            duration=duration,
             fails_count=self.fails_count
         )
