@@ -383,8 +383,13 @@ class TestChecksResultsModel:
         assert test_results.features_results is None
 
     def test_test_results_render(self):
-        """Test ChecksResults markdown rendering."""
-        result1 = ConstraintBashResult(constraint_id="c1", verdict=True, shrunken_output="ok")
+        """Test ChecksResults markdown rendering with duration and verdict fields."""
+        result1 = ConstraintBashResult(
+            constraint_id="c1",
+            verdict=True,
+            shrunken_output="ok",
+            duration=1.234
+        )
 
         feature_result = FeatureResult(
             feature_id="f1",
@@ -398,8 +403,31 @@ class TestChecksResultsModel:
 
         assert "## Constraint Results" in markdown
         assert "### Feature: f1" in markdown
-        assert "✓ PASS" in markdown
+        assert "**Verdict:** ✓ PASS" in markdown
+        assert "**Duration:** 1.23s" in markdown
         assert "f1.c1" in markdown
+
+    def test_test_results_render_fail_verdict(self):
+        """Test ChecksResults markdown rendering with FAIL verdict."""
+        result = ConstraintBashResult(
+            constraint_id="c2",
+            verdict=False,
+            shrunken_output="failed",
+            duration=2.567
+        )
+
+        feature_result = FeatureResult(
+            feature_id="f1",
+            constraints_results={"c2": result}
+        )
+        test_results = ChecksResults(
+            features_results={"f1": feature_result}
+        )
+
+        markdown = test_results.render()
+
+        assert "**Verdict:** ✗ FAIL" in markdown
+        assert "**Duration:** 2.57s" in markdown
 
     def test_test_results_render_toc(self):
         """Test ChecksResults table of contents rendering."""
