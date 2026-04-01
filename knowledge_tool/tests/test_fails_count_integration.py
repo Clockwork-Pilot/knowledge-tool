@@ -44,7 +44,7 @@ def test_fails_count_incremented_on_constraint_failure():
         }
 
         spec_path = tmpdir / "task-spec.k.json"
-        checks_path = tmpdir / "checks_results.k.json"
+        checks_path = tmpdir / "task-results.k.json"
 
         # Write temporary spec
         spec_path.write_text(json.dumps(spec_data, indent=2))
@@ -70,8 +70,8 @@ def test_fails_count_incremented_on_constraint_failure():
         constraint = updated_spec["features"]["test_feature"]["constraints"]["test_constraint_fail"]
         assert constraint["fails_count"] == 1, f"Expected fails_count=1, got {constraint['fails_count']}"
 
-        # Verify checks_results.k.json was created
-        assert checks_path.exists(), "checks_results.k.json not created"
+        # Verify task-results.k.json was created
+        assert checks_path.exists(), "task-results.k.json not created"
 
         print("✓ fails_count successfully incremented on constraint failure")
 
@@ -113,7 +113,7 @@ def test_fails_count_not_incremented_on_passing_constraint():
         }
 
         spec_path = tmpdir / "task-spec.k.json"
-        checks_path = tmpdir / "checks_results.k.json"
+        checks_path = tmpdir / "task-results.k.json"
 
         # Write temporary task
         spec_path.write_text(json.dumps(spec_data, indent=2))
