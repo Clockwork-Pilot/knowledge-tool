@@ -521,5 +521,302 @@ class TestUnverifiedConstraintsTracking:
         assert serialized["contains_unverified_constraints"] is True
 
 
+class TestFeatureRemovalProtection:
+    """Test protection against removing features containing verified constraints."""
+
+    def test_feature_removal_allowed_without_constraints(self):
+        """Test that feature can be removed if it has no constraints."""
+        original_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {
+                "f1": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "f1",
+                    "description": "Feature with no constraints"
+                    # No constraints
+                }
+            }
+        }
+
+        new_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {}  # f1 removed
+        }
+
+        # Should succeed - feature has no constraints
+        spec = Spec.model_validate(
+            new_doc,
+            context={"original_doc": original_doc}
+        )
+        assert spec.features is not None
+        assert len(spec.features) == 0
+
+    def test_feature_removal_allowed_with_unverified_constraints(self):
+        """Test that feature can be removed if all constraints are unverified."""
+        original_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {
+                "f1": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "f1",
+                    "description": "Feature",
+                    "constraints": {
+                        "c1": {
+                            "id": "c1",
+                            "cmd": "echo test",
+                            "description": "Unverified",
+                            "fails_count": 0  # Unverified
+                        }
+                    }
+                }
+            }
+        }
+
+        new_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {}  # f1 removed
+        }
+
+        # Should succeed - feature constraints are unverified
+        spec = Spec.model_validate(
+            new_doc,
+            context={"original_doc": original_doc}
+        )
+        assert spec.features is not None
+        assert len(spec.features) == 0
+
+    def test_feature_removal_blocked_with_verified_constraint(self):
+        """Test that feature removal is blocked if it contains verified constraints."""
+        original_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {
+                "critical_feature": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "critical_feature",
+                    "description": "Feature with proven constraint",
+                    "constraints": {
+                        "proven_constraint": {
+                            "id": "proven_constraint",
+                            "cmd": "test -f /tmp/critical",
+                            "description": "Critical constraint",
+                            "fails_count": 2  # Verified/proven
+                        }
+                    }
+                }
+            }
+        }
+
+        new_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {}  # critical_feature removed
+        }
+
+        # Should raise ValueError
+        with pytest.raises(ValueError) as exc_info:
+            Spec.model_validate(
+                new_doc,
+                context={"original_doc": original_doc}
+            )
+
+        error_msg = str(exc_info.value)
+        assert "Cannot remove feature" in error_msg
+        assert "critical_feature" in error_msg
+        assert "proven_constraint" in error_msg
+        assert "fails_count=2" in error_msg
+
+    def test_feature_removal_blocked_with_mixed_constraints(self):
+        """Test that feature removal is blocked if it has ANY verified constraint, even with unverified ones."""
+        original_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {
+                "f1": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "f1",
+                    "description": "Mixed constraints",
+                    "constraints": {
+                        "unverified_c": {
+                            "id": "unverified_c",
+                            "cmd": "echo new",
+                            "description": "New constraint",
+                            "fails_count": 0  # Unverified
+                        },
+                        "verified_c": {
+                            "id": "verified_c",
+                            "cmd": "echo old",
+                            "description": "Proven constraint",
+                            "fails_count": 1  # Verified - blocks removal
+                        }
+                    }
+                }
+            }
+        }
+
+        new_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {}  # f1 removed
+        }
+
+        # Should raise ValueError because of verified_c
+        with pytest.raises(ValueError) as exc_info:
+            Spec.model_validate(
+                new_doc,
+                context={"original_doc": original_doc}
+            )
+
+        error_msg = str(exc_info.value)
+        assert "Cannot remove feature" in error_msg
+        assert "f1" in error_msg
+        assert "verified_c" in error_msg
+
+    def test_multiple_features_removal_with_one_verified(self):
+        """Test that removal is blocked when any removed feature has verified constraints."""
+        original_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {
+                "f1": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "f1",
+                    "description": "Feature 1",
+                    "constraints": {}
+                },
+                "f2": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "f2",
+                    "description": "Feature 2",
+                    "constraints": {
+                        "c1": {
+                            "id": "c1",
+                            "cmd": "test",
+                            "description": "Verified",
+                            "fails_count": 1
+                        }
+                    }
+                }
+            }
+        }
+
+        new_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {}  # Both f1 and f2 removed
+        }
+
+        # Should raise error for f2
+        with pytest.raises(ValueError) as exc_info:
+            Spec.model_validate(
+                new_doc,
+                context={"original_doc": original_doc}
+            )
+
+        error_msg = str(exc_info.value)
+        assert "f2" in error_msg
+
+    def test_other_features_can_be_modified_when_some_protected(self):
+        """Test that other features can be modified even if one has verified constraints."""
+        original_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {
+                "safe_feature": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "safe_feature",
+                    "description": "No verified constraints",
+                    "constraints": {}
+                },
+                "protected_feature": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "protected_feature",
+                    "description": "Has verified constraint",
+                    "constraints": {
+                        "c1": {
+                            "id": "c1",
+                            "cmd": "test",
+                            "description": "Verified",
+                            "fails_count": 1
+                        }
+                    }
+                }
+            }
+        }
+
+        new_doc = {
+            "type": "Spec",
+            "model_version": 1,
+            "version": 1,
+            "description": "Test",
+            "features": {
+                "safe_feature": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "safe_feature",
+                    "description": "Modified description",
+                    "constraints": {}
+                },
+                "protected_feature": {
+                    "type": "Feature",
+                    "model_version": 1,
+                    "id": "protected_feature",
+                    "description": "Has verified constraint",
+                    "constraints": {
+                        "c1": {
+                            "id": "c1",
+                            "cmd": "test",
+                            "description": "Verified",
+                            "fails_count": 1
+                        }
+                    }
+                }
+            }
+        }
+
+        # Should succeed - safe_feature is modified, protected_feature is preserved
+        spec = Spec.model_validate(
+            new_doc,
+            context={"original_doc": original_doc}
+        )
+        assert spec.features is not None
+        assert len(spec.features) == 2
+        assert spec.features["safe_feature"].description == "Modified description"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

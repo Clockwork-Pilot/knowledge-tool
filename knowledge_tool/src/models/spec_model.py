@@ -31,6 +31,43 @@ class Spec(RenderableModel):
 
     @model_validator(mode='before')
     @classmethod
+    def protect_features_with_verified_constraints_from_removal(cls, data: Any, info: ValidationInfo) -> Any:
+        """Raise an error if any feature with verified constraints is being removed.
+
+        A feature with verified constraints (at least one constraint with fails_count > 0)
+        cannot be removed, as it would lose proven constraint failure history.
+
+        Uses original_doc from validation context to detect removed features.
+        """
+        context = getattr(info, 'context', None) if info else None
+        if not context or not isinstance(data, dict):
+            return data
+
+        original_doc = context.get('original_doc', {})
+        if not original_doc or original_doc.get('type') != 'Spec':
+            return data
+
+        original_features = original_doc.get('features') or {}
+        new_features = data.get('features') or {}
+
+        for feature_id, original_feature_data in original_features.items():
+            if feature_id not in new_features:
+                # Feature is being removed. Check if it has verified constraints.
+                constraints = (original_feature_data or {}).get('constraints') or {}
+                for cid, constraint_data in constraints.items():
+                    fails_count = constraint_data.get('fails_count', 0)
+                    if fails_count > 0:
+                        # Found a verified constraint in the removed feature
+                        raise ValueError(
+                            f"Cannot remove feature '{feature_id}': contains verified constraint '{cid}' "
+                            f"with fails_count={fails_count} > 0. "
+                            f"Fix the constraint to pass first."
+                        )
+
+        return data
+
+    @model_validator(mode='before')
+    @classmethod
     def compute_unverified_constraints_flag(cls, data: Any, info: ValidationInfo) -> Any:
         """Automatically compute contains_unverified_constraints flag.
 
