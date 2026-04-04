@@ -21,6 +21,9 @@ class ConstraintBashResult(BaseModel):
     timestamp: Optional[datetime] = Field(None, description="When the constraint was executed")
     duration: Optional[float] = Field(None, description="Execution duration in seconds")
     fails_count: int = Field(default=0, description="Number of times this constraint has failed")
+    postponed: bool = Field(
+        default=False, description="True if constraint check was skipped due to failing dependencies"
+    )
 
 
 class FeatureResult(BaseModel):

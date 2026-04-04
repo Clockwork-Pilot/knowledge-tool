@@ -109,10 +109,16 @@ class ConstraintBash(BaseModel):
         Returns:
             ConstraintBashResult with verdict, output, duration, and current fails_count
         """
+        # Truncate output: first 100 chars + last 100 chars if longer than 200
+        if len(output) > 200:
+            shrunken = output[:100] + "..." + output[-100:]
+        else:
+            shrunken = output
+
         return ConstraintBashResult(
             constraint_id=self.id,
             verdict=verdict,
-            shrunken_output=output[:100],
+            shrunken_output=shrunken,
             timestamp=datetime.now(),
             duration=duration,
             fails_count=self.fails_count

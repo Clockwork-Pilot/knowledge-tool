@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Feature model - renderable feature with embedded constraints."""
 
-from typing import Any, Dict, Optional, Literal, Union
+from typing import Any, Dict, Optional, Literal, Union, List
 from pydantic import BaseModel, Field, model_validator, ValidationInfo
 
 # Support both package imports (.) and direct imports (models)
@@ -28,6 +28,9 @@ class Feature(RenderableModel):
     description: str = Field(..., description="Feature description")
     goals: Optional[list[str]] = Field(
         None, description="List of goals/objectives for this feature"
+    )
+    depends_on: Optional[List[str]] = Field(
+        None, description="List of feature IDs this feature depends on"
     )
     constraints: Optional[Dict[str, ConstraintBash]] = Field(
         None, description="Embedded constraints (bash commands)"
@@ -92,6 +95,58 @@ class Feature(RenderableModel):
                             f"Cannot update constraint '{cid}': fails_count={fails_count} > 0. "
                             f"Fix the constraint to pass first."
                         )
+
+        return data
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_depends_on_references(cls, data: Any, info: ValidationInfo) -> Any:
+        """Validate that all features in depends_on exist.
+
+        Checks that each feature ID listed in depends_on is available in the document's
+        features collection.
+        """
+        if not isinstance(data, dict):
+            return data
+
+        depends_on = data.get('depends_on')
+        if not depends_on:
+            return data
+
+        # Validate it's a list of strings
+        if not isinstance(depends_on, list):
+            raise ValueError(f"depends_on must be a list, got {type(depends_on).__name__}")
+
+        for feature_id in depends_on:
+            if not isinstance(feature_id, str):
+                raise ValueError(f"Feature IDs in depends_on must be strings, got {type(feature_id).__name__}")
+            if not feature_id.strip():
+                raise ValueError("Feature IDs in depends_on cannot be empty strings")
+
+        # Try to get the full features list from context
+        context = getattr(info, 'context', None) if info else None
+        if not context:
+            return data
+
+        original_doc = context.get('original_doc', {})
+        if not original_doc:
+            return data
+
+        # Handle both Spec (features at root) and Task (features in spec)
+        doc_type = original_doc.get('type')
+        if doc_type == 'Spec':
+            available_features = (original_doc.get('features') or {}).keys()
+        else:
+            available_features = ((original_doc.get('spec') or {}).get('features') or {}).keys()
+
+        # Validate each depends_on reference exists
+        current_feature_id = data.get('id')
+        for feature_id in depends_on:
+            if feature_id not in available_features:
+                raise ValueError(
+                    f"Feature '{current_feature_id}' depends on '{feature_id}', "
+                    f"but '{feature_id}' does not exist in the document"
+                )
 
         return data
 
