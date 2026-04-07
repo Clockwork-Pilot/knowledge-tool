@@ -1,6 +1,6 @@
 .claude/
 .credentials/
-protected_files.txt
+.protected_files.txt
 
 
 # Python

@@ -3,11 +3,10 @@
 from .base_model import RenderableModel
 from .doc_model import Doc, Opts
 from .feature_model import Feature
-from .results_model import ConstraintBashResult, FeatureResult, ChecksResults, FeaturesStats, FeaturesStatsDiff
+from .results_model import ConstraintBashResult, FeatureResult, ChecksResults
 from .constraints_model import (
     ConstraintBash,
 )
-from .task_model import Task, Iteration, CodeStats, TaskTestMetrics
 from .spec_model import Spec
 
 # Registry mapping model type string to model class.
@@ -17,8 +16,6 @@ MODEL_REGISTRY = {
     "Doc": Doc,
     "Feature": Feature,
     "ChecksResults": ChecksResults,
-    "Task": Task,
-    "Iteration": Iteration,
     "Spec": Spec,
 }
 
@@ -30,13 +27,7 @@ __all__ = [
     "ConstraintBash",
     "ConstraintBashResult",
     "FeatureResult",
-    "FeaturesStats",
-    "FeaturesStatsDiff",
     "ChecksResults",
-    "Task",
-    "Iteration",
-    "CodeStats",
-    "TaskTestMetrics",
     "Spec",
     "MODEL_REGISTRY",
 ]

@@ -20,6 +20,8 @@
     - [Configuration](#configuration)
       - [knowledge_config.yaml](#knowledge_configyaml)
       - [Environment Variables](#environment-variables)
+        - [KNOWLEDGE_TOOL_CONFIG_ROOT](#knowledge_tool_config_root)
+        - [PROTECTED_REGISTRY_DIR](#protected_registry_dir)
       - [Automatic Discovery](#automatic-discovery)
       - [Configuration File Format](#configuration-file-format)
         - [Built-in Models](#built-in-models)
@@ -136,8 +138,9 @@ Pluggable models allow you to define custom document types beyond the built-in D
 
 ###### Internal Models
   - Doc - Default document model with hierarchical children
-  - Task - Optional task tracking model (if available)
-  - Iteration - Optional iteration model (if available)
+  - Feature - Feature definition model
+  - Spec - Specification model
+  - ChecksResults - Test/constraint results model
 
 ##### Usage
 How to use pluggable models with apply_json_patch.
@@ -219,16 +222,35 @@ pluggable_models_dirs:
   - /absolute/path/to/models
 
 #### Environment Variables
+Control configuration via environment variables.
+
+##### KNOWLEDGE_TOOL_CONFIG_ROOT
 Control where knowledge_config.yaml is searched for.
 
-##### Resolution Order
+###### Resolution Order
   1. KNOWLEDGE_TOOL_CONFIG_ROOT - Highest priority, explicitly set config directory
   2. Upward directory search - Walks up from current working directory
   3. Script directory (knowledge_tool/) - Default fallback
   4. Empty config if not found - Only built-in models (Doc, Task, etc.)
 
-##### Examples
+###### Examples
   - KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge_document_tools apply-json-patch doc.json '[...]'
+
+##### PROTECTED_REGISTRY_DIR
+Control where protected files registry is stored.
+
+###### Purpose
+Specifies the directory where .protected_files.txt is stored (tracks registered knowledge files)
+
+###### Default
+Parent of knowledge_tool/ directory (project root)
+
+###### Examples
+  - export PROTECTED_REGISTRY_DIR=/custom/path
+  - PROTECTED_REGISTRY_DIR=/custom/path python patch_knowledge_document.py doc.json '[...]'
+
+###### Filename
+.protected_files.txt
 
 #### Automatic Discovery
 When used as a Claude plugin or in a Claude project, knowledge_config.yaml is automatically found without manual configuration by searching upward from the current working directory.
@@ -256,8 +278,9 @@ KNOWLEDGE_TOOL_CONFIG_ROOT environment variable
 ##### Built-in Models
 Built-in models are always loaded and available:
 - Doc: Default document model with hierarchical children
-- Task: Task with plan and iterations (from lifecycle_tool)
-- Iteration: Task iteration with metrics
+- Feature: Feature definition model for constraints and testing
+- Spec: Specification model
+- ChecksResults: Test and constraint results tracking model
 
 ##### Pluggable Models Directories
 List of directories containing custom/pluggable knowledge models. Paths are relative to the config file location.

@@ -9,11 +9,12 @@ from typing import Any, Dict, List, Optional
 from jsonpatch import JsonPatch, JsonPatchException
 from pydantic import ValidationError
 
-# Auto-setup: Add src directory to path (handles direct execution or package import)
+# Auto-setup: Add parent directory to path so "from knowledge_tool import ..." works
+# when this script is run directly (not as a module import)
 _pkg_dir = Path(__file__).parent
-_src_dir = _pkg_dir / "src"
-if str(_src_dir) not in sys.path:
-    sys.path.insert(0, str(_src_dir))
+_parent_dir = _pkg_dir.parent
+if str(_parent_dir) not in sys.path:
+    sys.path.insert(0, str(_parent_dir))
 
 # INSERT HERE — before any src imports touch config.py:
 if 'CLAUDE_PROJECT_ROOT' not in os.environ and len(sys.argv) > 1:
@@ -21,8 +22,8 @@ if 'CLAUDE_PROJECT_ROOT' not in os.environ and len(sys.argv) > 1:
     if _doc.parent.exists():
         os.environ['CLAUDE_PROJECT_ROOT'] = str(_doc.parent)
 
-# Now we can import from src modules
-from models import Doc
+# Now we can import from knowledge_tool package
+from knowledge_tool import Doc
 from common.response import ApplyPatchErrorResponse
 from common.file_tools import write_protected_file
 from common.render import render

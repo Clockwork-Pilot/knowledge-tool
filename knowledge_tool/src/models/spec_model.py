@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Spec model for feature specifications with versioning."""
 
+import re
 from typing import Any, Dict, Optional, Literal
 from pydantic import Field, model_validator, ValidationInfo
 
@@ -157,11 +158,6 @@ class Spec(RenderableModel):
                         # Render constraint heading at level 4 (under ### feature)
                         lines.append(f"#### {constraint.id}")
                         lines.append(f"**Description:** {constraint.description}")
-
-                        # Render constraint-specific details
-                        if hasattr(constraint, 'cmd'):  # ConstraintBash
-                            lines.append(f"**Command:** `{constraint.cmd}`")
-
                         lines.append("")
 
                 # Render metadata if present
@@ -187,14 +183,17 @@ class Spec(RenderableModel):
             toc_lines.append("- [Features](#features)")
             for feature_id in sorted(self.features.keys()):
                 feature = self.features[feature_id]
-                # Feature anchor: generated from ID
-                feature_anchor = feature_id.lower().replace(' ', '-')
+                # Feature anchor: generated from "Feature: {id}" heading text using markdown rules
+                heading_text = f"Feature: {feature_id}"
+                feature_anchor = heading_text.lower().replace(' ', '-')
+                feature_anchor = re.sub(r'[^\w-]', '', feature_anchor)
+                feature_anchor = re.sub(r'-+', '-', feature_anchor).strip('-')
                 toc_lines.append(f"    - [Feature: {feature_id}](#{feature_anchor})")
 
                 # Add constraints for this feature (nested deeper with 6-space indentation)
                 if feature.constraints:
                     for constraint_id in sorted(feature.constraints.keys()):
-                        # Constraint anchor: generated from ID only
+                        # Constraint anchor: generated from ID heading text
                         constraint_anchor = constraint_id.lower().replace(' ', '-')
                         toc_lines.append(f"      - [{constraint_id}](#{constraint_anchor})")
 

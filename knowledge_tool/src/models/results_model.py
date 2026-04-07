@@ -2,8 +2,8 @@
 """Constraint execution result models."""
 
 from datetime import datetime
-from typing import Optional, Dict, List, Union, Literal
-from pydantic import BaseModel, Field, model_validator, model_serializer
+from typing import Optional, Dict, Literal
+from pydantic import BaseModel, Field
 
 # Support both package imports (.) and direct imports (models)
 try:
@@ -35,87 +35,6 @@ class FeatureResult(BaseModel):
     )
 
 
-class FeaturesStats(BaseModel):
-    """Statistics tracking feature constraint validation results for an iteration."""
-
-    failed: Dict[str, FeatureResult] = Field(
-        default_factory=dict,
-        description="Failed features with their FeatureResult details. Passing features are absent."
-    )
-
-    def diff(self, previous: Optional["FeaturesStats"]) -> "FeaturesStatsDiff":
-        """Calculate difference between this and previous features stats.
-
-        Uses only the failed dict keys — a feature absent from failed is passing.
-
-        Args:
-            previous: Previous iteration's FeaturesStats (None if first iteration)
-
-        Returns:
-            FeaturesStatsDiff with improved, regressed, and still_failing features
-        """
-        if previous is None:
-            return FeaturesStatsDiff(
-                improved={},
-                regressed={},
-                still_failing={
-                    fid: list(fr.constraints_results.keys())
-                    for fid, fr in self.failed.items()
-                }
-            )
-
-        improved = {}
-        regressed = {}
-
-        # Improved: was failing, now passing (absent from current failed)
-        for feature_id, feature_result in previous.failed.items():
-            if feature_id not in self.failed:
-                improved[feature_id] = list(feature_result.constraints_results.keys())
-
-        # Regressed: was passing (absent from previous failed), now failing
-        for feature_id, feature_result in self.failed.items():
-            if feature_id not in previous.failed:
-                regressed[feature_id] = list(feature_result.constraints_results.keys())
-
-        still_failing = {
-            fid: list(self.failed[fid].constraints_results.keys())
-            for fid in set(self.failed.keys()).intersection(previous.failed.keys())
-        }
-
-        return FeaturesStatsDiff(
-            improved=improved,
-            regressed=regressed,
-            still_failing=still_failing
-        )
-
-
-class FeaturesStatsDiff(BaseModel):
-    """Tracks changes in feature constraint validation between iterations."""
-
-    improved: Dict[str, List[str]] = Field(
-        default_factory=dict,
-        description="Features that improved (fail->pass): feature_id -> list of constraint IDs"
-    )
-    regressed: Dict[str, List[str]] = Field(
-        default_factory=dict,
-        description="Features that regressed (pass->fail): feature_id -> list of constraint IDs"
-    )
-    still_failing: Dict[str, List[str]] = Field(
-        default_factory=dict,
-        description="Features still failing: feature_id -> list of constraint IDs"
-    )
-
-    @model_serializer
-    def serialize(self) -> dict:
-        """Omit empty sub-dicts."""
-        d = {}
-        if self.improved:
-            d['improved'] = self.improved
-        if self.regressed:
-            d['regressed'] = self.regressed
-        if self.still_failing:
-            d['still_failing'] = self.still_failing
-        return d
 
 
 class ChecksResults(RenderableModel):
@@ -173,23 +92,32 @@ class ChecksResults(RenderableModel):
                         lines.append(f"### Feature: {feature_id}")
                         lines.append("")
 
+                        # Feature summary
+                        passed = sum(1 for r in feature_result.constraints_results.values() if r.verdict)
+                        total = len(feature_result.constraints_results)
+                        status = "✓" if passed == total else "⚠"
+                        lines.append(f"**{status} {passed}/{total} constraints passed**")
+                        lines.append("")
+
                         for constraint_id in sorted(feature_result.constraints_results.keys()):
                             result = feature_result.constraints_results[constraint_id]
                             namespaced_id = f"{feature_id}.{constraint_id}"
                             constraint_anchor = namespaced_id.replace("_", "-").replace(" ", "-").replace(".", "-")
                             verdict_str = "✓ PASS" if result.verdict else "✗ FAIL"
+
                             lines.append(f"<a id=\"{constraint_anchor}\"></a>")
-                            lines.append(f"#### {namespaced_id}")
-                            lines.append(f"**Verdict:** {verdict_str}")
-                            if result.timestamp:
-                                lines.append(f"**Timestamp:** {result.timestamp.isoformat()}")
-                            if result.duration is not None:
-                                lines.append(f"**Duration:** {result.duration:.2f}s")
-                            if result.shrunken_output:
-                                lines.append(f"**Output:** `{result.shrunken_output}`")
+                            lines.append(f"**{verdict_str}** {constraint_id}")
                             lines.append("")
 
-                        lines.append("")
+                            # Indented details as list items
+                            if result.timestamp:
+                                lines.append(f"- Executed: {result.timestamp.isoformat()}")
+                            if result.duration is not None:
+                                lines.append(f"- Duration: {result.duration:.2f}s")
+                            if result.shrunken_output:
+                                lines.append(f"- Output: {result.shrunken_output}")
+
+                            lines.append("")
 
         return "\n".join(lines).strip()
 

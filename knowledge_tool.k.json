@@ -246,8 +246,9 @@
                     ],
                     "internal_models": [
                       "Doc - Default document model with hierarchical children",
-                      "Task - Optional task tracking model (if available)",
-                      "Iteration - Optional iteration model (if available)"
+                      "Feature - Feature definition model",
+                      "Spec - Specification model",
+                      "ChecksResults - Test/constraint results model"
                     ]
                   }
                 },
@@ -327,17 +328,43 @@
               "model_version": 1,
               "id": "env_vars",
               "label": "Environment Variables",
-              "description": "Control where knowledge_config.yaml is searched for.",
-              "metadata": {
-                "resolution_order": [
-                  "1. KNOWLEDGE_TOOL_CONFIG_ROOT - Highest priority, explicitly set config directory",
-                  "2. Upward directory search - Walks up from current working directory",
-                  "3. Script directory (knowledge_tool/) - Default fallback",
-                  "4. Empty config if not found - Only built-in models (Doc, Task, etc.)"
-                ],
-                "examples": [
-                  "KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge_document_tools apply-json-patch doc.json '[...]'"
-                ]
+              "description": "Control configuration via environment variables.",
+              "metadata": {},
+              "children": {
+                "config_root": {
+                  "type": "Doc",
+                  "model_version": 1,
+                  "id": "config_root_var",
+                  "label": "KNOWLEDGE_TOOL_CONFIG_ROOT",
+                  "description": "Control where knowledge_config.yaml is searched for.",
+                  "metadata": {
+                    "resolution_order": [
+                      "1. KNOWLEDGE_TOOL_CONFIG_ROOT - Highest priority, explicitly set config directory",
+                      "2. Upward directory search - Walks up from current working directory",
+                      "3. Script directory (knowledge_tool/) - Default fallback",
+                      "4. Empty config if not found - Only built-in models (Doc, Task, etc.)"
+                    ],
+                    "examples": [
+                      "KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge_document_tools apply-json-patch doc.json '[...]'"
+                    ]
+                  }
+                },
+                "registry_dir": {
+                  "type": "Doc",
+                  "model_version": 1,
+                  "id": "registry_dir_var",
+                  "label": "PROTECTED_REGISTRY_DIR",
+                  "description": "Control where protected files registry is stored.",
+                  "metadata": {
+                    "purpose": "Specifies the directory where .protected_files.txt is stored (tracks registered knowledge files)",
+                    "default": "Parent of knowledge_tool/ directory (project root)",
+                    "examples": [
+                      "export PROTECTED_REGISTRY_DIR=/custom/path",
+                      "PROTECTED_REGISTRY_DIR=/custom/path python patch_knowledge_document.py doc.json '[...]'"
+                    ],
+                    "filename": ".protected_files.txt"
+                  }
+                }
               }
             },
             "auto_discovery": {
@@ -368,7 +395,7 @@
                   "model_version": 1,
                   "id": "config_built_in_models",
                   "label": "Built-in Models",
-                  "description": "Built-in models are always loaded and available:\n- Doc: Default document model with hierarchical children\n- Task: Task with plan and iterations (from lifecycle_tool)\n- Iteration: Task iteration with metrics",
+                  "description": "Built-in models are always loaded and available:\n- Doc: Default document model with hierarchical children\n- Feature: Feature definition model for constraints and testing\n- Spec: Specification model\n- ChecksResults: Test and constraint results tracking model",
                   "metadata": {}
                 },
                 "pluggable_directories": {

@@ -37,28 +37,43 @@ python /path/to/knowledge_tool/patch_knowledge_document.py doc.k.json '[{"op": "
 python /path/to/knowledge_tool/patch_knowledge_document.py doc.k.json '[{"op": "add", "path": "/id", "value": "my_doc"}]'
 ```
 
+## Configuration
+
+All configuration is centralized in `knowledge_tool/__init__.py` (single source of truth):
+
+- **`PROTECTED_REGISTRY_FILENAME`**: Name of the registry file (default: `.protected_files.txt`)
+- **`PROTECTED_REGISTRY_DIR`**: Directory where registry files are stored (configurable via environment variable)
+
+### Customize Registry Location
+
+Set the `PROTECTED_REGISTRY_DIR` environment variable:
+
+```bash
+# Use custom registry directory
+export PROTECTED_REGISTRY_DIR=/path/to/custom/directory
+python /path/to/knowledge_tool/patch_knowledge_document.py doc.k.json '[...]'
+
+# Registry files will be stored in /path/to/custom/directory/.protected_files.txt
+```
+
+Default: Registry files are stored in the project root (parent of `knowledge_tool/` directory)
+
+### Using the Public API
+
+```python
+# Core models and registry
+from knowledge_tool import Doc, RenderableModel, MODEL_REGISTRY
+
+# JSON Patch operations
+from knowledge_tool.patch_knowledge_document import apply_json_patch
+
+# Knowledge files tracking (optional)
+from knowledge_files_registry import add_knowledge_files
+```
+
 ## Installation Note
 
 ⚠️ **Do NOT install this package with `pip install`**. Use the scripts directly:
 - The scripts are self-contained and work from any directory without installation
 - Run `patch_knowledge_document.py` directly: `python /path/to/patch_knowledge_document.py`
 - The script automatically locates its dependencies in the `src/` directory
-
-## Development in Docker
-
-```bash
-# Run in docker with SSH agent and volume mounts
-mkdir $(pwd)/.credentials -p && \
-  docker run -it --rm  \
-    --user 1000:1000  \
-    -w /project \
-    -v $HOME/.ssh/id_ed25519.pub:/home/node/.ssh/id_ed25519.pub:ro \
-    -v $SSH_AUTH_SOCK:/ssh-agent \
-    -e SSH_AUTH_SOCK=/ssh-agent \
-    -v $(pwd)/.credentials:/home/node/:Z  \
-    -v $(pwd):/project y2-coder
-
-# Inside container: activate venv and use the tools (do NOT pip install)
-cd /project && source .venv/bin/activate
-python apply_json_patch.py --help
-```

@@ -8,18 +8,19 @@ import sys
 from pathlib import Path
 import importlib.util
 
-# Add src as a top-level module named knowledge_tool
+# Setup paths for imports
 src_dir = Path(__file__).parent.parent / "src"
-knowledge_tool_dir = src_dir.parent
+knowledge_tool_pkg = src_dir.parent  # knowledge_tool directory
+
 if str(src_dir) not in sys.path:
     sys.path.insert(0, str(src_dir))
-if str(knowledge_tool_dir) not in sys.path:
-    sys.path.insert(0, str(knowledge_tool_dir))
+if str(knowledge_tool_pkg) not in sys.path:
+    sys.path.insert(0, str(knowledge_tool_pkg))
 
-# Create a knowledge_tool module alias that points to src
+# Load knowledge_tool package from its __init__.py
 spec = importlib.util.spec_from_file_location(
     "knowledge_tool",
-    str(src_dir / "__init__.py"),
+    str(knowledge_tool_pkg / "__init__.py"),
     submodule_search_locations=[str(src_dir)]
 )
 knowledge_tool_module = importlib.util.module_from_spec(spec)

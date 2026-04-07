@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 """Utility module for managing knowledge files registry."""
 
-import sys
+import os
 from pathlib import Path
 from typing import Set
 
+# Import config from parent package
 try:
-    from config import KNOWN_KNOWLEDGE_FILES_PATH
+    from knowledge_tool import PROTECTED_REGISTRY_DIR, PROTECTED_REGISTRY_FILENAME
 except ImportError:
-    # When called from outside the project root, resolve config.py relative to this file:
-    # knowledge_tool/knowledge_tool/src/ -> up 4 levels -> project root
-    _project_root = Path(__file__).parent.parent.parent.parent
-    sys.path.insert(0, str(_project_root))
-    from config import KNOWN_KNOWLEDGE_FILES_PATH
+    # Fallback: compute locally if package import fails
+    KNOWLEDGE_TOOL_ROOT = Path(__file__).parent.parent
+    PROTECTED_REGISTRY_DIR = Path(
+        os.getenv(
+            "PROTECTED_REGISTRY_DIR",
+            str(KNOWLEDGE_TOOL_ROOT.parent)
+        )
+    )
+    PROTECTED_REGISTRY_FILENAME = ".protected_files.txt"
+
+KNOWN_KNOWLEDGE_FILES_PATH = PROTECTED_REGISTRY_DIR / PROTECTED_REGISTRY_FILENAME
 
 
 def _is_restricted_path(file_path: str) -> bool:
