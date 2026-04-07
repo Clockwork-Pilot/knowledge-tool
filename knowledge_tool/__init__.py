@@ -22,7 +22,10 @@ PROTECTED_REGISTRY_FILENAME = ".protected_files.txt"  # Customizable in this mod
 PROTECTED_REGISTRY_DIR = Path(
     os.getenv(
         "PROTECTED_REGISTRY_DIR",
-        str(_knowledge_tool_root.parent)  # parent of knowledge_tool/
+        os.getenv(
+            "CLAUDE_PROJECT_ROOT",
+            os.getcwd()  # Fallback to current working directory
+        )
     )
 )
 

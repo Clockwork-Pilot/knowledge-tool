@@ -13,12 +13,12 @@ import pytest
 
 @pytest.mark.skip(reason="constraint_checker needs Spec document support (spec decoupling)")
 def test_fails_count_incremented_on_constraint_failure():
-    """Test that fails_count is incremented when constraint fails (now in task-spec.k.json)."""
+    """Test that fails_count is incremented when constraint fails (now in spec.k.json)."""
     # Create temporary directory for test files
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
 
-        # Create temporary task-spec.k.json with a failing constraint
+        # Create temporary spec.k.json with a failing constraint
         spec_data = {
             "type": "Spec",
             "model_version": 1,
@@ -43,8 +43,8 @@ def test_fails_count_incremented_on_constraint_failure():
             }
         }
 
-        spec_path = tmpdir / "task-spec.k.json"
-        checks_path = tmpdir / "task-results.k.json"
+        spec_path = tmpdir / "spec.k.json"
+        checks_path = tmpdir / "spec-checks.k.json"
 
         # Write temporary spec
         spec_path.write_text(json.dumps(spec_data, indent=2))
@@ -70,19 +70,19 @@ def test_fails_count_incremented_on_constraint_failure():
         constraint = updated_spec["features"]["test_feature"]["constraints"]["test_constraint_fail"]
         assert constraint["fails_count"] == 1, f"Expected fails_count=1, got {constraint['fails_count']}"
 
-        # Verify task-results.k.json was created
-        assert checks_path.exists(), "task-results.k.json not created"
+        # Verify spec-checks.k.json was created
+        assert checks_path.exists(), "spec-checks.k.json not created"
 
         print("✓ fails_count successfully incremented on constraint failure")
 
 
 @pytest.mark.skip(reason="constraint_checker needs Spec document support (spec decoupling)")
 def test_fails_count_not_incremented_on_passing_constraint():
-    """Test that fails_count is NOT incremented when constraint passes (now in task-spec.k.json)."""
+    """Test that fails_count is NOT incremented when constraint passes (now in spec.k.json)."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
 
-        # Create temporary task-spec.k.json with a passing constraint
+        # Create temporary spec.k.json with a passing constraint
         spec_data = {
             "type": "Spec",
             "model_version": 1,
@@ -112,8 +112,8 @@ def test_fails_count_not_incremented_on_passing_constraint():
             }
         }
 
-        spec_path = tmpdir / "task-spec.k.json"
-        checks_path = tmpdir / "task-results.k.json"
+        spec_path = tmpdir / "spec.k.json"
+        checks_path = tmpdir / "spec-checks.k.json"
 
         # Write temporary task
         spec_path.write_text(json.dumps(spec_data, indent=2))
