@@ -106,6 +106,27 @@ class TestConstraintBashModel:
 
         assert bash.id == "c1"
 
+    def test_constraint_bash_with_timeout(self):
+        """Test ConstraintBash with timeout field."""
+        bash = ConstraintBash(
+            id="c1",
+            cmd="sleep 10",
+            description="Long running command",
+            timeout=5
+        )
+
+        assert bash.timeout == 5
+
+    def test_constraint_bash_timeout_default_none(self):
+        """Test ConstraintBash timeout defaults to None."""
+        bash = ConstraintBash(
+            id="c1",
+            cmd="test",
+            description="Test"
+        )
+
+        assert bash.timeout is None
+
 
 class TestConstraintBashFailsCountProtection:
     """Test ConstraintBash fails_count protection feature."""
@@ -212,6 +233,68 @@ class TestConstraintBashFailsCountProtection:
         assert 'fails_count' in json_data
         assert json_data['fails_count'] == 1
 
+    def test_timeout_excluded_from_json_when_none(self):
+        """Test that timeout is excluded from JSON when None.
+
+        Default timeout=None is not serialized to keep JSON clean and minimal.
+        Only when timeout is set does it appear in the JSON output.
+        """
+        import json
+
+        # Constraint with timeout=None (default)
+        c = ConstraintBash(id='test', cmd='echo hello', description='Test')
+        json_str = c.model_dump_json()
+        json_data = json.loads(json_str)
+
+        # timeout should NOT be in JSON when None
+        assert 'timeout' not in json_data, "timeout should be excluded when None"
+
+        # Create constraint with timeout set
+        c = ConstraintBash(id='test', cmd='echo hello', description='Test', timeout=30)
+        json_str = c.model_dump_json()
+        json_data = json.loads(json_str)
+
+        # timeout should BE in JSON when set
+        assert 'timeout' in json_data
+        assert json_data['timeout'] == 30
+
+
+
+class TestConstraintBashRendering:
+    """Test ConstraintBash rendering to markdown."""
+
+    def test_constraint_render_with_timeout(self):
+        """Test rendering constraint with timeout."""
+        c = ConstraintBash(
+            id='timeout_test',
+            cmd='sleep 1',
+            description='Test timeout display',
+            timeout=10
+        )
+
+        markdown = c.render()
+
+        assert 'timeout_test' in markdown
+        assert 'Test timeout display' in markdown
+        assert 'Bash' in markdown
+        assert 'sleep 1' in markdown
+        assert '**Timeout:** 10s' in markdown
+
+    def test_constraint_render_without_timeout(self):
+        """Test rendering constraint without timeout (uses default)."""
+        c = ConstraintBash(
+            id='no_timeout_test',
+            cmd='echo hello',
+            description='Test without timeout'
+        )
+
+        markdown = c.render()
+
+        assert 'no_timeout_test' in markdown
+        assert 'Test without timeout' in markdown
+        assert 'Bash' in markdown
+        assert 'echo hello' in markdown
+        assert 'Timeout' not in markdown
 
 
 class TestConstraintBashResultModel:

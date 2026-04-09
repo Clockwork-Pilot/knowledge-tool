@@ -21,6 +21,7 @@ class ConstraintBash(BaseModel):
     cmd: str = Field(..., description="Bash command to execute")
     description: str = Field(..., description="Description of the constraint")
     fails_count: int = Field(default=0, description="Count of failed constraint executions; prevents cmd updates when > 0")
+    timeout: Optional[int] = Field(default=None, description="Timeout in seconds for command execution; None means use global default")
 
     @classmethod
     def validate_removal(cls, data: dict) -> None:
@@ -53,7 +54,7 @@ class ConstraintBash(BaseModel):
 
     @model_serializer
     def serialize(self) -> dict:
-        """Serialize model, omitting fails_count when it is the default value (0)."""
+        """Serialize model, omitting fails_count and timeout when not set."""
         d = {
             'id': self.id,
             'cmd': self.cmd,
@@ -61,6 +62,8 @@ class ConstraintBash(BaseModel):
         }
         if self.fails_count != 0:
             d['fails_count'] = self.fails_count
+        if self.timeout is not None:
+            d['timeout'] = self.timeout
         return d
 
     @model_validator(mode='before')
@@ -88,6 +91,8 @@ class ConstraintBash(BaseModel):
         lines.append(f"**Description:** {self.description}")
         lines.append(f"**Type:** Bash")
         lines.append(f"**Command:** `{self.cmd}`")
+        if self.timeout is not None:
+            lines.append(f"**Timeout:** {self.timeout}s")
         return "\n".join(lines)
 
     def render_toc(self) -> list:
