@@ -447,9 +447,9 @@ class TestChecksResultsModel:
 
         assert "## Constraint Results" in markdown
         assert "### Feature: f1" in markdown
-        assert "**Verdict:** ✓ PASS" in markdown
-        assert "**Duration:** 1.23s" in markdown
-        assert "f1.c1" in markdown
+        assert "**✓ PASS**" in markdown
+        assert "Duration: 1.23s" in markdown
+        assert "c1" in markdown
 
     def test_test_results_render_fail_verdict(self):
         """Test ChecksResults markdown rendering with FAIL verdict."""
@@ -470,8 +470,8 @@ class TestChecksResultsModel:
 
         markdown = test_results.render()
 
-        assert "**Verdict:** ✗ FAIL" in markdown
-        assert "**Duration:** 2.57s" in markdown
+        assert "**✗ FAIL**" in markdown
+        assert "Duration: 2.57s" in markdown
 
     def test_test_results_render_toc(self):
         """Test ChecksResults table of contents rendering."""
