@@ -73,28 +73,31 @@ class Feature(RenderableModel):
             else:
                 # PROTECTION GUARD — DO NOT REMOVE OR WEAKEN THIS BLOCK.
                 #
-                # Once a constraint has failed (fails_count > 0) it is "verified":
-                #   - cmd     : LOCKED. Changing cmd would silently invalidate the proof that
-                #               the constraint was ever red. Fix the implementation instead.
-                #   - fails_count: LOCKED via this path. The only legitimate way to increment
-                #               fails_count is through check_spec_constraints.py's special flow,
-                #               which writes the JSON directly (bypassing model validation).
-                #               Any other attempt to modify fails_count is treated as tampering.
+                # fails_count: LOCKED unconditionally via the model path. The only legitimate
+                #              way to change fails_count is through check_spec_constraints.py's
+                #              special flow, which writes JSON directly (bypassing model
+                #              validation). Any model-mediated change — including 0 → N on an
+                #              unverified constraint — is tampering.
+                # cmd:         LOCKED once the constraint is verified (fails_count > 0). Changing
+                #              cmd would silently invalidate the proof that it was ever red.
                 fails_count = constraint_data.get('fails_count', 0)
-                if fails_count > 0:
-                    new_c = new_constraints[cid]
-                    new_cmd = new_c.get('cmd') if isinstance(new_c, dict) else None
-                    original_cmd = constraint_data.get('cmd')
-                    new_fails_count = new_c.get('fails_count', 0) if isinstance(new_c, dict) else 0
+                new_c = new_constraints[cid]
+                new_cmd = new_c.get('cmd') if isinstance(new_c, dict) else None
+                original_cmd = constraint_data.get('cmd')
+                new_fails_count = new_c.get('fails_count', 0) if isinstance(new_c, dict) else 0
 
-                    cmd_changed = original_cmd and new_cmd and original_cmd != new_cmd
-                    fails_count_changed = fails_count != new_fails_count
+                if fails_count != new_fails_count:
+                    raise ValueError(
+                        f"Cannot modify fails_count for constraint '{cid}' "
+                        f"({fails_count} -> {new_fails_count}): fails_count is only writable "
+                        f"by check_spec_constraints.py."
+                    )
 
-                    if cmd_changed or fails_count_changed:
-                        raise ValueError(
-                            f"Cannot update constraint '{cid}': fails_count={fails_count} > 0. "
-                            f"Fix the constraint to pass first."
-                        )
+                if fails_count > 0 and original_cmd and new_cmd and original_cmd != new_cmd:
+                    raise ValueError(
+                        f"Cannot update constraint '{cid}' cmd: fails_count={fails_count} > 0. "
+                        f"Fix the constraint to pass first."
+                    )
 
         return data
 

@@ -818,5 +818,59 @@ class TestFeatureRemovalProtection:
         assert spec.features["safe_feature"].description == "Modified description"
 
 
+class TestFailsCountTamperingProtection:
+    """Per design: the ONLY legitimate way to change fails_count is via
+    check_spec_constraints.py writing JSON directly (bypassing model validation).
+    Any model-mediated change to fails_count is tampering and must be rejected,
+    including setting fails_count on a previously unverified (0) constraint.
+    """
+
+    def test_setting_fails_count_on_unverified_constraint_is_blocked(self):
+        """Reproduces the bug: a patch that sets fails_count from 0 to N on an
+        unverified constraint currently slips through because the guard is
+        gated on original fails_count > 0. Per design, this must be rejected.
+        """
+        original_doc = {
+            "type": "Spec",
+            "features": {
+                "f1": {
+                    "id": "f1",
+                    "description": "Test feature",
+                    "constraints": {
+                        "c1": {
+                            "id": "c1",
+                            "cmd": "echo test",
+                            "description": "Unverified constraint",
+                            "fails_count": 0,
+                        }
+                    },
+                }
+            },
+        }
+
+        tampered = {
+            "id": "f1",
+            "description": "Test feature",
+            "constraints": {
+                "c1": {
+                    "id": "c1",
+                    "cmd": "echo test",
+                    "description": "Unverified constraint",
+                    "fails_count": 5,  # tampering: model path must never move this
+                }
+            },
+        }
+
+        with pytest.raises(ValueError) as exc_info:
+            Feature.model_validate(
+                tampered,
+                context={"original_doc": original_doc},
+            )
+
+        error_msg = str(exc_info.value)
+        assert "fails_count" in error_msg
+        assert "c1" in error_msg
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
