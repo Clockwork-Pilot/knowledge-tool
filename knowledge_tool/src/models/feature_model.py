@@ -73,13 +73,17 @@ class Feature(RenderableModel):
             else:
                 # PROTECTION GUARD — DO NOT REMOVE OR WEAKEN THIS BLOCK.
                 #
-                # fails_count: LOCKED unconditionally via the model path. The only legitimate
-                #              way to change fails_count is through check_spec_constraints.py's
-                #              special flow, which writes JSON directly (bypassing model
-                #              validation). Any model-mediated change — including 0 → N on an
-                #              unverified constraint — is tampering.
-                # cmd:         LOCKED once the constraint is verified (fails_count > 0). Changing
-                #              cmd would silently invalidate the proof that it was ever red.
+                # Two-interface design: this validator is the USER path, activated when
+                # apply_json_patch passes context={'original_doc': ...}. Any attempt to
+                # change fails_count through this path is tampering and rejected.
+                #
+                # The ADMIN path lives in check_spec_constraints.py: it writes the 0 → 1
+                # transition directly, running schema validation WITHOUT passing
+                # original_doc — so this guard returns early (see the context check at
+                # the top of this validator) and doesn't fire.
+                #
+                # cmd is locked once verified (fails_count > 0): changing cmd would
+                # silently invalidate the proof that the constraint was ever red.
                 fails_count = constraint_data.get('fails_count', 0)
                 new_c = new_constraints[cid]
                 new_cmd = new_c.get('cmd') if isinstance(new_c, dict) else None

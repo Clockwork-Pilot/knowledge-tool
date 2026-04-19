@@ -393,15 +393,14 @@ def temp_spec_doc():
 
 
 class TestFailsCountElevationBlocked:
-    """User-driven patches must not elevate fails_count from 0/unset to > 0.
-
-    fails_count is only writable via check_spec_constraints.py (which writes JSON
-    directly, bypassing model validation). Any attempt through the patch flow
-    must return a non-None error, which drives a non-zero CLI exit.
+    """User-driven patches must not elevate fails_count on an existing constraint
+    nor fabricate a new "verified" constraint. Only check_spec_constraints.py's
+    admin-path writer may set fails_count.
     """
 
     def test_patch_replace_fails_count_on_existing_unverified_constraint_is_blocked(self, temp_spec_doc):
-        """Replacing fails_count 0/unset → 1 on an existing constraint must error."""
+        """Elevating fails_count 0 → N on an existing constraint through the
+        user-facing patch API must error. This is the "smuggling" attack."""
         original = json.loads(Path(temp_spec_doc).read_text())
 
         patch = json.dumps([
@@ -416,8 +415,6 @@ class TestFailsCountElevationBlocked:
 
         assert error is not None, "Expected error when user elevates fails_count, got success"
         assert isinstance(error, ApplyPatchErrorResponse)
-
-        # File must be untouched.
         assert json.loads(Path(temp_spec_doc).read_text()) == original
 
     def test_patch_add_new_constraint_with_fails_count_is_blocked(self, temp_spec_doc):

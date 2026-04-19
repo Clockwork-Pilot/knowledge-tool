@@ -101,16 +101,15 @@ class TestConstraintRemovalProtection:
 
 
 class TestConstraintUpdateProtection:
-    """Test protection against updating constraint cmd/description when fails_count > 0.
+    """Test Feature-level protection against updating constraint cmd when fails_count > 0.
 
-    NOTE: These tests are for the feature 'protect_constraint_updates_when_failed'.
-    The validator has not been fully implemented yet in ConstraintBash.protect_cmd_when_failed.
-    Tests are marked as skipped until implementation is complete.
+    The lock lives in Feature.protect_proven_constraints_from_removal (feature_model.py),
+    so these tests drive Feature.model_validate. Description is intentionally not locked —
+    it's documentation and can be edited freely.
     """
 
-    @pytest.mark.skip(reason="protect_cmd_when_failed validator not yet implemented in ConstraintBash")
     def test_cmd_update_allowed_with_no_failure_history(self):
-        """Test that cmd can be updated when constraint hasn't failed (fails_count=0)."""
+        """cmd can change when constraint is unverified (fails_count=0)."""
         original_doc = {
             "type": "Spec",
             "features": {
@@ -122,30 +121,30 @@ class TestConstraintUpdateProtection:
                             "id": "c1",
                             "cmd": "echo old",
                             "description": "Test",
-                            "fails_count": 0  # No failure history
+                            "fails_count": 0,
                         }
-                    }
+                    },
                 }
-            }
+            },
         }
 
-        # Change cmd
-        new_data = {
-            "id": "c1",
-            "cmd": "echo new",
-            "description": "Test"
+        new_feature = {
+            "id": "f1",
+            "description": "Test",
+            "constraints": {
+                "c1": {
+                    "id": "c1",
+                    "cmd": "echo new",
+                    "description": "Test",
+                }
+            },
         }
 
-        # Should succeed - no failure history
-        constraint = ConstraintBash.model_validate(
-            new_data,
-            context={"original_doc": original_doc}
-        )
-        assert constraint.cmd == "echo new"
+        feature = Feature.model_validate(new_feature, context={"original_doc": original_doc})
+        assert feature.constraints["c1"].cmd == "echo new"
 
-    @pytest.mark.skip(reason="protect_cmd_when_failed validator not yet implemented in ConstraintBash")
     def test_cmd_update_blocked_with_failure_history(self):
-        """Test that cmd updates are blocked when constraint has failed (fails_count > 0)."""
+        """cmd changes are blocked once constraint is verified (fails_count > 0)."""
         original_doc = {
             "type": "Spec",
             "features": {
@@ -157,36 +156,36 @@ class TestConstraintUpdateProtection:
                             "id": "c1",
                             "cmd": "echo original",
                             "description": "Test",
-                            "fails_count": 2  # Has failure history
+                            "fails_count": 1,
                         }
-                    }
+                    },
                 }
-            }
+            },
         }
 
-        # Try to change cmd
-        new_data = {
-            "id": "c1",
-            "cmd": "echo modified",
-            "description": "Test"
+        new_feature = {
+            "id": "f1",
+            "description": "Test",
+            "constraints": {
+                "c1": {
+                    "id": "c1",
+                    "cmd": "echo modified",
+                    "description": "Test",
+                    "fails_count": 1,
+                }
+            },
         }
 
-        # Should raise ValueError
         with pytest.raises(ValueError) as exc_info:
-            ConstraintBash.model_validate(
-                new_data,
-                context={"original_doc": original_doc}
-            )
+            Feature.model_validate(new_feature, context={"original_doc": original_doc})
 
         error_msg = str(exc_info.value)
-        assert "Cannot update constraint" in error_msg
         assert "c1" in error_msg
-        assert "fails_count=2" in error_msg
         assert "cmd" in error_msg
+        assert "fails_count=1" in error_msg
 
-    @pytest.mark.skip(reason="protect_cmd_when_failed validator not yet implemented in ConstraintBash")
-    def test_description_update_blocked_with_failure_history(self):
-        """Test that description updates are blocked when constraint has failed."""
+    def test_description_update_allowed_with_failure_history(self):
+        """Description is not locked — it's documentation, safe to update even when verified."""
         original_doc = {
             "type": "Spec",
             "features": {
@@ -198,35 +197,31 @@ class TestConstraintUpdateProtection:
                             "id": "c1",
                             "cmd": "test",
                             "description": "Original description",
-                            "fails_count": 1
+                            "fails_count": 1,
                         }
-                    }
+                    },
                 }
-            }
+            },
         }
 
-        # Try to change description
-        new_data = {
-            "id": "c1",
-            "cmd": "test",
-            "description": "Modified description"
+        new_feature = {
+            "id": "f1",
+            "description": "Test",
+            "constraints": {
+                "c1": {
+                    "id": "c1",
+                    "cmd": "test",
+                    "description": "Modified description",
+                    "fails_count": 1,
+                }
+            },
         }
 
-        # Should raise ValueError
-        with pytest.raises(ValueError) as exc_info:
-            ConstraintBash.model_validate(
-                new_data,
-                context={"original_doc": original_doc}
-            )
+        feature = Feature.model_validate(new_feature, context={"original_doc": original_doc})
+        assert feature.constraints["c1"].description == "Modified description"
 
-        error_msg = str(exc_info.value)
-        assert "Cannot update constraint" in error_msg
-        assert "description" in error_msg
-        assert "fails_count=1" in error_msg
-
-    @pytest.mark.skip(reason="protect_cmd_when_failed validator not yet implemented in ConstraintBash")
     def test_other_fields_updatable_with_failure_history(self):
-        """Test that non-cmd/description fields can be updated even with failures."""
+        """Non-cmd fields (e.g. timeout) remain editable when constraint is verified."""
         original_doc = {
             "type": "Spec",
             "features": {
@@ -238,28 +233,79 @@ class TestConstraintUpdateProtection:
                             "id": "c1",
                             "cmd": "test",
                             "description": "Test",
-                            "tags": ["structure"],  # Must be valid literal
-                            "fails_count": 1
+                            "timeout": 30,
+                            "fails_count": 1,
                         }
-                    }
+                    },
                 }
-            }
+            },
         }
 
-        # Update tags (not cmd or description)
-        new_data = {
-            "id": "c1",
-            "cmd": "test",
+        new_feature = {
+            "id": "f1",
             "description": "Test",
-            "tags": ["API"]  # Valid literal value
+            "constraints": {
+                "c1": {
+                    "id": "c1",
+                    "cmd": "test",
+                    "description": "Test",
+                    "timeout": 120,
+                    "fails_count": 1,
+                }
+            },
         }
 
-        # Should succeed - only non-protected fields changed
-        constraint = ConstraintBash.model_validate(
-            new_data,
-            context={"original_doc": original_doc}
-        )
-        assert constraint.tags == ["API"]
+        feature = Feature.model_validate(new_feature, context={"original_doc": original_doc})
+        assert feature.constraints["c1"].timeout == 120
+
+
+class TestFailsCountTamperingProtection:
+    """Model-level guard: any fails_count change through the user path is rejected.
+
+    The user path passes context={'original_doc': ...}; the admin path (the
+    checker's direct write) does not pass context, so the guard returns early
+    and lets the 0 → 1 transition through. Tests here exercise the user path.
+    """
+
+    def test_setting_fails_count_on_unverified_constraint_is_blocked(self):
+        """0 → N smuggling on an existing constraint via the model path must raise."""
+        original_doc = {
+            "type": "Spec",
+            "features": {
+                "f1": {
+                    "id": "f1",
+                    "description": "Test feature",
+                    "constraints": {
+                        "c1": {
+                            "id": "c1",
+                            "cmd": "echo test",
+                            "description": "Unverified constraint",
+                            "fails_count": 0,
+                        }
+                    },
+                }
+            },
+        }
+
+        tampered = {
+            "id": "f1",
+            "description": "Test feature",
+            "constraints": {
+                "c1": {
+                    "id": "c1",
+                    "cmd": "echo test",
+                    "description": "Unverified constraint",
+                    "fails_count": 5,
+                }
+            },
+        }
+
+        with pytest.raises(ValueError) as exc_info:
+            Feature.model_validate(tampered, context={"original_doc": original_doc})
+
+        error_msg = str(exc_info.value)
+        assert "fails_count" in error_msg
+        assert "c1" in error_msg
 
 
 class TestUnverifiedConstraintsTracking:
@@ -816,60 +862,6 @@ class TestFeatureRemovalProtection:
         assert spec.features is not None
         assert len(spec.features) == 2
         assert spec.features["safe_feature"].description == "Modified description"
-
-
-class TestFailsCountTamperingProtection:
-    """Per design: the ONLY legitimate way to change fails_count is via
-    check_spec_constraints.py writing JSON directly (bypassing model validation).
-    Any model-mediated change to fails_count is tampering and must be rejected,
-    including setting fails_count on a previously unverified (0) constraint.
-    """
-
-    def test_setting_fails_count_on_unverified_constraint_is_blocked(self):
-        """Reproduces the bug: a patch that sets fails_count from 0 to N on an
-        unverified constraint currently slips through because the guard is
-        gated on original fails_count > 0. Per design, this must be rejected.
-        """
-        original_doc = {
-            "type": "Spec",
-            "features": {
-                "f1": {
-                    "id": "f1",
-                    "description": "Test feature",
-                    "constraints": {
-                        "c1": {
-                            "id": "c1",
-                            "cmd": "echo test",
-                            "description": "Unverified constraint",
-                            "fails_count": 0,
-                        }
-                    },
-                }
-            },
-        }
-
-        tampered = {
-            "id": "f1",
-            "description": "Test feature",
-            "constraints": {
-                "c1": {
-                    "id": "c1",
-                    "cmd": "echo test",
-                    "description": "Unverified constraint",
-                    "fails_count": 5,  # tampering: model path must never move this
-                }
-            },
-        }
-
-        with pytest.raises(ValueError) as exc_info:
-            Feature.model_validate(
-                tampered,
-                context={"original_doc": original_doc},
-            )
-
-        error_msg = str(exc_info.value)
-        assert "fails_count" in error_msg
-        assert "c1" in error_msg
 
 
 if __name__ == "__main__":
