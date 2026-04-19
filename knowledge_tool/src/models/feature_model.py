@@ -99,6 +99,19 @@ class Feature(RenderableModel):
                         f"Fix the constraint to pass first."
                     )
 
+        # Reject brand-new constraints that arrive with fails_count > 0.
+        # Only check_spec_constraints.py may write fails_count; smuggling a
+        # pre-verified constraint through the patch flow is tampering.
+        for cid, new_c in new_constraints.items():
+            if cid in original_constraints or not isinstance(new_c, dict):
+                continue
+            new_fails_count = new_c.get('fails_count', 0) or 0
+            if new_fails_count:
+                raise ValueError(
+                    f"Cannot create constraint '{cid}' with fails_count={new_fails_count}: "
+                    f"fails_count is only writable by check_spec_constraints.py."
+                )
+
         return data
 
     @model_validator(mode='before')

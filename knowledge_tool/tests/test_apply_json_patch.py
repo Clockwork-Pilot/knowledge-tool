@@ -353,5 +353,108 @@ class TestErrorResponseStructure:
         assert error is None
 
 
+@pytest.fixture
+def temp_spec_doc():
+    """Spec document with one unverified constraint (fails_count unset)."""
+    doc = {
+        "type": "Spec",
+        "model_version": 1,
+        "version": 1,
+        "description": "Test spec",
+        "features": {
+            "f1": {
+                "type": "Feature",
+                "model_version": 1,
+                "id": "f1",
+                "description": "Test feature",
+                "constraints": {
+                    "c1": {
+                        "id": "c1",
+                        "cmd": "echo test",
+                        "description": "Unverified constraint"
+                    }
+                }
+            }
+        }
+    }
+
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".k.json", delete=False
+    ) as f:
+        json.dump(doc, f)
+        temp_path = f.name
+
+    yield temp_path
+
+    Path(temp_path).unlink()
+    md_path = Path(temp_path).with_suffix(".md")
+    if md_path.exists():
+        md_path.unlink()
+
+
+class TestFailsCountElevationBlocked:
+    """User-driven patches must not elevate fails_count from 0/unset to > 0.
+
+    fails_count is only writable via check_spec_constraints.py (which writes JSON
+    directly, bypassing model validation). Any attempt through the patch flow
+    must return a non-None error, which drives a non-zero CLI exit.
+    """
+
+    def test_patch_replace_fails_count_on_existing_unverified_constraint_is_blocked(self, temp_spec_doc):
+        """Replacing fails_count 0/unset → 1 on an existing constraint must error."""
+        original = json.loads(Path(temp_spec_doc).read_text())
+
+        patch = json.dumps([
+            {
+                "op": "add",
+                "path": "/features/f1/constraints/c1/fails_count",
+                "value": 1
+            }
+        ])
+
+        error = apply_json_patch(temp_spec_doc, patch)
+
+        assert error is not None, "Expected error when user elevates fails_count, got success"
+        assert isinstance(error, ApplyPatchErrorResponse)
+
+        # File must be untouched.
+        assert json.loads(Path(temp_spec_doc).read_text()) == original
+
+    def test_patch_add_new_constraint_with_fails_count_is_blocked(self, temp_spec_doc):
+        """Creating a brand-new constraint with fails_count > 0 must error.
+
+        Attack vector: a user fabricates a "verified" constraint (fails_count=1)
+        in one patch call, skipping the check_spec_constraints.py flow that is
+        the only legitimate writer of fails_count.
+        """
+        original = json.loads(Path(temp_spec_doc).read_text())
+
+        patch = json.dumps([
+            {
+                "op": "add",
+                "path": "/features/f1/constraints/c_new",
+                "value": {
+                    "id": "c_new",
+                    "cmd": "echo new",
+                    "description": "Smuggled constraint",
+                    "fails_count": 1
+                }
+            }
+        ])
+
+        error = apply_json_patch(temp_spec_doc, patch)
+
+        persisted = json.loads(Path(temp_spec_doc).read_text())
+        smuggled = persisted.get("features", {}).get("f1", {}).get("constraints", {}).get("c_new")
+        assert error is not None, (
+            "Expected error when user creates constraint with fails_count>0, "
+            f"but apply_json_patch returned success and persisted: {smuggled}"
+        )
+        assert isinstance(error, ApplyPatchErrorResponse)
+
+        # File must be untouched.
+        assert persisted == original
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
