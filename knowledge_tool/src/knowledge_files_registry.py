@@ -7,19 +7,13 @@ from typing import Set
 
 # Import config from parent package
 try:
-    from knowledge_tool import PROTECTED_REGISTRY_DIR, PROTECTED_REGISTRY_FILENAME
+    from knowledge_tool import PROJECT_ROOT, PROTECTED_REGISTRY_FILENAME
 except ImportError:
     # Fallback: compute locally if package import fails
-    KNOWLEDGE_TOOL_ROOT = Path(__file__).parent.parent
-    PROTECTED_REGISTRY_DIR = Path(
-        os.getenv(
-            "PROTECTED_REGISTRY_DIR",
-            str(KNOWLEDGE_TOOL_ROOT.parent)
-        )
-    )
+    PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", os.getcwd())).resolve()
     PROTECTED_REGISTRY_FILENAME = ".protected_files.txt"
 
-KNOWN_KNOWLEDGE_FILES_PATH = PROTECTED_REGISTRY_DIR / PROTECTED_REGISTRY_FILENAME
+KNOWN_KNOWLEDGE_FILES_PATH = PROJECT_ROOT / PROTECTED_REGISTRY_FILENAME
 
 
 def _is_restricted_path(file_path: str) -> bool:

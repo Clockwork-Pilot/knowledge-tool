@@ -348,22 +348,6 @@
                       "KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge_document_tools apply-json-patch doc.json '[...]'"
                     ]
                   }
-                },
-                "registry_dir": {
-                  "type": "Doc",
-                  "model_version": 1,
-                  "id": "registry_dir_var",
-                  "label": "PROTECTED_REGISTRY_DIR",
-                  "description": "Control where protected files registry is stored.",
-                  "metadata": {
-                    "purpose": "Specifies the directory where .protected_files.txt is stored (tracks registered knowledge files)",
-                    "default": "Parent of knowledge_tool/ directory (project root)",
-                    "examples": [
-                      "export PROTECTED_REGISTRY_DIR=/custom/path",
-                      "PROTECTED_REGISTRY_DIR=/custom/path python patch_knowledge_document.py doc.json '[...]'"
-                    ],
-                    "filename": ".protected_files.txt"
-                  }
                 }
               }
             },

@@ -21,7 +21,6 @@
       - [knowledge_config.yaml](#knowledge_configyaml)
       - [Environment Variables](#environment-variables)
         - [KNOWLEDGE_TOOL_CONFIG_ROOT](#knowledge_tool_config_root)
-        - [PROTECTED_REGISTRY_DIR](#protected_registry_dir)
       - [Automatic Discovery](#automatic-discovery)
       - [Configuration File Format](#configuration-file-format)
         - [Built-in Models](#built-in-models)
@@ -235,22 +234,6 @@ Control where knowledge_config.yaml is searched for.
 
 ###### Examples
   - KNOWLEDGE_TOOL_CONFIG_ROOT=/etc/knowledge_document_tools apply-json-patch doc.json '[...]'
-
-##### PROTECTED_REGISTRY_DIR
-Control where protected files registry is stored.
-
-###### Purpose
-Specifies the directory where .protected_files.txt is stored (tracks registered knowledge files)
-
-###### Default
-Parent of knowledge_tool/ directory (project root)
-
-###### Examples
-  - export PROTECTED_REGISTRY_DIR=/custom/path
-  - PROTECTED_REGISTRY_DIR=/custom/path python patch_knowledge_document.py doc.json '[...]'
-
-###### Filename
-.protected_files.txt
 
 #### Automatic Discovery
 When used as a Claude plugin or in a Claude project, knowledge_config.yaml is automatically found without manual configuration by searching upward from the current working directory.

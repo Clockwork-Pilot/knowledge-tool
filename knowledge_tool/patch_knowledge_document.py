@@ -16,11 +16,11 @@ _parent_dir = _pkg_dir.parent
 if str(_parent_dir) not in sys.path:
     sys.path.insert(0, str(_parent_dir))
 
-# INSERT HERE — before any src imports touch config.py:
-if 'CLAUDE_PROJECT_ROOT' not in os.environ and len(sys.argv) > 1:
+# Must run before any src imports touch config.py
+if 'PROJECT_ROOT' not in os.environ and len(sys.argv) > 1:
     _doc = Path(sys.argv[1]).resolve()
     if _doc.parent.exists():
-        os.environ['CLAUDE_PROJECT_ROOT'] = str(_doc.parent)
+        os.environ['PROJECT_ROOT'] = str(_doc.parent)
 
 # Now we can import from knowledge_tool package
 from knowledge_tool import Doc

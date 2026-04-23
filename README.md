@@ -42,21 +42,18 @@ python /path/to/knowledge_tool/patch_knowledge_document.py doc.k.json '[{"op": "
 All configuration is centralized in `knowledge_tool/__init__.py` (single source of truth):
 
 - **`PROTECTED_REGISTRY_FILENAME`**: Name of the registry file (default: `.protected_files.txt`)
-- **`PROTECTED_REGISTRY_DIR`**: Directory where registry files are stored (configurable via environment variable)
 
-### Customize Registry Location
+### Registry Location
 
-Set the `PROTECTED_REGISTRY_DIR` environment variable:
+The registry file (`.protected_files.txt`) is stored in the directory given by the `PROJECT_ROOT` environment variable. If `PROJECT_ROOT` is not set, the current working directory is used.
 
 ```bash
-# Use custom registry directory
-export PROTECTED_REGISTRY_DIR=/path/to/custom/directory
+# Point registry at a specific project
+export PROJECT_ROOT=/path/to/project
 python /path/to/knowledge_tool/patch_knowledge_document.py doc.k.json '[...]'
 
-# Registry files will be stored in /path/to/custom/directory/.protected_files.txt
+# Registry file will be stored at $PROJECT_ROOT/.protected_files.txt
 ```
-
-Default: Registry files are stored in the project root (parent of `knowledge_tool/` directory)
 
 ### Using the Public API
 

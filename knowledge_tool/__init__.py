@@ -17,17 +17,9 @@ if str(_src_dir) not in sys.path:
 if str(_knowledge_tool_root) not in sys.path:
     sys.path.insert(0, str(_knowledge_tool_root))
 
-# Configuration - single source of truth
-PROTECTED_REGISTRY_FILENAME = ".protected_files.txt"  # Customizable in this module
-PROTECTED_REGISTRY_DIR = Path(
-    os.getenv(
-        "PROTECTED_REGISTRY_DIR",
-        os.getenv(
-            "CLAUDE_PROJECT_ROOT",
-            os.getcwd()  # Fallback to current working directory
-        )
-    )
-)
+# Protected files (knowledge_tool uses this to track protected files)
+PROTECTED_REGISTRY_FILENAME = ".protected_files.txt"
+PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", os.getcwd())).resolve()
 
 # Import models for compatibility with tests
 from models import (
@@ -43,5 +35,5 @@ __all__ = [
     "Opts",
     "MODEL_REGISTRY",
     "PROTECTED_REGISTRY_FILENAME",
-    "PROTECTED_REGISTRY_DIR",
+    "PROJECT_ROOT",
 ]
