@@ -10,6 +10,21 @@ except ImportError:
     from base_model import RenderableModel
 
 
+class EnvVar(BaseModel):
+    """One environment variable entry in a SpecRef's envs dict.
+
+    `value` is the string assigned to the env var at check time. `info` is
+    a human-readable note documenting what the env is for and why it is set
+    — it has no runtime effect but is rendered into the project markdown.
+    """
+
+    value: str = Field(description="Environment variable value")
+    info: str = Field(
+        default="",
+        description="Human-readable note about what this env is for",
+    )
+
+
 class SpecRef(BaseModel):
     """Reference to one spec inside a Project.
 
@@ -20,8 +35,10 @@ class SpecRef(BaseModel):
     the project file's own directory — i.e. the current PROJECT_ROOT.
 
     The envs dict declares environment variables applied to this spec's
-    constraint commands at check time. They layer on top of the defaults,
-    so they can override PROJECT_ROOT if an explicit value is desired.
+    constraint commands at check time. Each entry is an `EnvVar` carrying
+    both the `value` applied at check time and a human-readable `info`
+    note. They layer on top of the defaults, so they can override
+    PROJECT_ROOT if an explicit value is desired.
     """
 
     spec_dir: str = Field(
@@ -29,7 +46,7 @@ class SpecRef(BaseModel):
         description='Directory containing the spec (relative to project file, or absolute). '
                     'Empty or "." means the project file\'s directory.',
     )
-    envs: Dict[str, str] = Field(
+    envs: Dict[str, EnvVar] = Field(
         default_factory=dict,
         description="Environment variables set for this spec's constraint commands",
     )
@@ -81,8 +98,9 @@ class Project(RenderableModel):
                 lines.append("")
                 if ref.envs:
                     lines.append("**Envs:**")
-                    for key, value in sorted(ref.envs.items()):
-                        lines.append(f"- `{key}`: `{value}`")
+                    for key, entry in sorted(ref.envs.items()):
+                        suffix = f" — {entry.info}" if entry.info else ""
+                        lines.append(f"- `{key}`: `{entry.value}`{suffix}")
                     lines.append("")
 
         return "\n".join(lines).strip()
