@@ -8,6 +8,7 @@ from .constraints_model import (
     ConstraintBash,
 )
 from .spec_model import Spec
+from .project_model import Project, SpecRef
 
 # Registry mapping model type string to model class.
 # Add all RenderableModel subclasses that can be root nodes in knowledge documents.
@@ -17,6 +18,7 @@ MODEL_REGISTRY = {
     "Feature": Feature,
     "ChecksResults": ChecksResults,
     "Spec": Spec,
+    "Project": Project,
 }
 
 __all__ = [
@@ -29,6 +31,8 @@ __all__ = [
     "FeatureResult",
     "ChecksResults",
     "Spec",
+    "Project",
+    "SpecRef",
     "MODEL_REGISTRY",
 ]
 
